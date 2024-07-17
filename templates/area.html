@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{%block conteudo%}
+
+<body>
+    <div id="AddPoint" style="height: 15%;">
+        <h2 style="text-align: center;">Predicão em Área</h2>
+    <ol>
+        <form action="{{url_for('area')}}" method="post">
+            <label for="ponto">Estação fixa</label>
+            <input type="text" id="ponto" name="ponto" required>
+
+            <label for="ponto2">Estação móvel</label>
+            <input type="text" id="ponto2" name="ponto2" required>
+
+            <label for="raio">Raio</label>
+            <input type="text" id="raio" name="raio" required>
+
+            <label for="f">Frequência (MHz)</label>
+            <input type="text" id="f" name="f" required>
+
+            <button>Calcular perda</button>
+        </form>
+    </ol>
+    </div>
+
+</body>
+{% endblock conteudo%}

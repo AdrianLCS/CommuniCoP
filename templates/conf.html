@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{%block conteudo%}
+
+<body>
+    <div id="config" style="height: 15%;">
+        <h2 style="text-align: center;">Parametros de Configuracao</h2>
+    <ol>
+        <form action="{{url_for('conf')}}" method="post">
+            <label for="urb">calcular perda urbana?</label>
+            <input type="text" id="urb" name="urb" required>
+
+            <label for="veg">cálcular perda em vegetação?</label>
+            <input type="text" id="veg" name="veg" required>
+
+            <label for="precisao">Precisao azimultal de predição de área em graus</label>
+            <input type="text" id="precisao" name="precisao" required>
+
+            <label for="larg">Largura média da rua em área urbana</label>
+            <input type="text" id="larg" name="larg" required>
+
+            <label for="alt">Altura máxima das construções em área urbana</label>
+            <input type="text" id="alt" name="alt" required>
+
+            <label for="sit">Variabilidade da situação (50 a 100. 100 para predições mais pessimistas e 50 para mais otimistas)</label>
+            <input type="text" id="sit" name="sit" required>
+
+
+            <button>Setar configuração</button>
+        </form>
+    </ol>
+    </div>
+
+</body>
+{% endblock conteudo%}

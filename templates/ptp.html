@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{%block conteudo%}
+
+<body>
+    <div id="AddPoint" style="height: 15%;">
+        <h2 style="text-align: center;">Predicão PTP</h2>
+    <ol>
+
+        <form action="{{url_for('ptp')}}" method="post">
+            <label for="ponto1">Ponto 1</label>
+            <select id="ponto1" name="ponto1" required>
+                    {%for marker in markers%}
+                    <option>{{marker["nome"]}}</option>
+                    {% endfor %}
+                </select>
+
+            <label for="ponto2">Ponto 2</label>
+            <select id="ponto2" name="ponto2" required>
+                    {%for marker in markers%}
+                    <option>{{marker["nome"]}}</option>
+                    {% endfor %}
+                </select>
+
+            <label for="f">Frequência</label>
+            <input type="text" id="f" name="f" required>
+
+            <button>Calcular perda</button>
+        </form>
+        <style>
+            table {
+                border-collapse: separate; /* Bordas separadas */
+                border-spacing: 10px; /* Define espaçamento entre células */
+            }
+        </style>
+        <table border="1">
+            <tr>
+                <th>P1  </th>
+                <th>P2  </th>
+                <th>Freq MHz </th>
+                <th>FSL (dB) </th>
+                <th>Perda Urb (dB) </th>
+                <th >Perda Veg (dB) </th>
+                <th>Perda Relevo (dB) </th>
+                <th>Perda Total (dB)  </th>
+                <th>Pot Tx P1 (dBm)  </th>
+                <th>Pot Tx P2  (dBm) </th>
+                <th>Ganho P1 (dB) </th>
+                <th>Ganho P2 (dB) </th>
+                <th>Pot Rx P1 (dBm) </th>
+                <th>Pot Rx P2 (dBm) </th>
+                <th>Sensibilidade P1 (dBm) </th>
+                <th>Sensibilidade P2 (dBm) </th>
+                <th>Estimativa  </th>
+            </tr>
+
+            <tr>
+            {%for chave, valor in perdas.items()%}
+                <td>{{valor}}</td>
+            {% endfor %}
+            </tr>
+        </table>
+        <img src="{{ figura }}" alt="Imagem">
+
+    </ol>
+    </div>
+
+</body>
+{% endblock conteudo%}
