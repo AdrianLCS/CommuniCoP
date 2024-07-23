@@ -81,6 +81,17 @@
 	        </form>
         </ol>
     </div>
+
+
+    <h2>Excluir ponto</h2>
+            <form action="{{url_for('ptp')}}" method="post">
+                <label for="ponto1">Selecione o ponto</label>
+                <select id="ponto1" name="ponto1" required>
+                        {%for marker in markers%}
+                        <option>{{marker["nome"]}}</option>
+                        {% endfor %}
+                </select>
+            </form>
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script>
         // Função para adicionar marcador
