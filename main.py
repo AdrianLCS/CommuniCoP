@@ -945,7 +945,7 @@ def addfoliun(local_mapas, local_cobertura):
                          name='OpenTopoMap').add_to(folium_map)
     except:
         print("erro ao tentar acessar a internet")
-
+    print(local_mapas)
     for i in local_mapas:
         carregamapa(i[0], i[1]).add_to(folium_map)
 
@@ -1501,15 +1501,18 @@ def upload_file():
         return 'Nenhum arquivo selecionado'
 
     mapas = session['mapas']
+
     if file and allowed_file(file.filename):
         filename = file.filename
         file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
         caminho_completo = os.path.join('uploads', filename)
-        mapas.append([caminho_completo, filename[:-4]])
-        session['mapas'] = mapas
-        with Image.open(caminho_completo) as img:
-            img = img.convert('RGB')
-            img.save(caminho_completo[:-4] + '.jpg', 'JPEG')
+        """ verificar se uma função consta na lista"""
+        if [caminho_completo, filename[:-4]] not in mapas:
+            mapas.append([caminho_completo, filename[:-4]])
+            session['mapas'] = mapas
+            with Image.open(caminho_completo) as img:
+                img = img.convert('RGB')
+                img.save(caminho_completo[:-4] + '.jpg', 'JPEG')
 
         return 'Arquivo enviado com sucesso'
     else:
