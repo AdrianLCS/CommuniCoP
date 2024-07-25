@@ -53,8 +53,8 @@ def raio_fresnel(n, d1, d2, f):
     return (n * (c / (f * 1000000)) * d1 * d2 / (d1 + d2)) ** 0.5
 
 
-def atenuaca_vegetacao_antiga_ITU(f, d):  # F em GHz e d em metros
-    L = 0.2 * (f ** 0.3) * (d ** 0.6)
+def atenuaca_vegetacao_antiga_ITU(f, d, par_c=0.6):  # F em GHz e d em metros
+    L = 0.2 * (f ** 0.3) * (d ** par_c)
     return L  # L em dB
 
 
@@ -527,5 +527,5 @@ def min_alt_ikegami(f, w=22.5, lr=2, th=np.pi / 2):
     min_alt = 0
     while (L < 0):
         min_alt = min_alt + 0.1
-        L = ikegami_model(min_alt,0 , f, w, lr, th)
+        L = ikegami_model(min_alt, 0, f, w, lr, th)
     return min_alt

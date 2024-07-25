@@ -856,8 +856,8 @@ def obter_vegeta_atravessada(f, indice, dem, landcover, dsm, hr, ht, distancia, 
                 for n in (0, 1, 2):
                     if landcover[3 * (indice + i) + n] == 10:
                         espesura = espesura + 10  # ( colocar 5, metade dos 10 m)
-        if (espesura > 100):#(contar0 > 0) and (espesura > 100):
-            espesura = espesura / 2
+        #if (espesura > 100):#(contar0 > 0) and (espesura > 100):
+        #    espesura = espesura / 2
 
 
     else:
@@ -897,8 +897,8 @@ def obter_vegeta_atravessada(f, indice, dem, landcover, dsm, hr, ht, distancia, 
                     if landcover[3 * (indice + i - 1) + n + 1] == 10:
                         espesura = espesura + 10  # ( colocar 5, metade dos 10 m)
 
-        if (espesura > 100):#(contar1 > 0) and (espesura > 100):#
-            espesura = espesura / 2
+        #if (espesura > 100):#(contar1 > 0) and (espesura > 100):#
+        #    espesura = espesura / 2
         ref = espesura
         #print(ref)
         altur_da_cobertuta2 = abs(dsm[:indice_d + 1] - dem[:indice_d + 1])
@@ -912,11 +912,11 @@ def obter_vegeta_atravessada(f, indice, dem, landcover, dsm, hr, ht, distancia, 
                     if landcover[3 * i + n] == 10:
                         espesura = espesura + 10  # ( colocar 5, metade dos 10 m)
 
-        if (espesura-ref > 100):#(contar2 > 0) and (espesura-ref > 100):
-            espesura = ref + (espesura - ref) / 2
+        #if (espesura-ref > 100):#(contar2 > 0) and (espesura-ref > 100):
+        #    espesura = ref + (espesura - ref) / 2
 
         #print(espesura)
-    return 0.6 * espesura  # considerando 40% da area coberta com vegetação elevada. a documentação dos dados estabelec 10% ou mais
+    return 0.4 * espesura  # considerando 40% da area coberta com vegetação elevada. a documentação dos dados estabelec 10% ou mais
 
 
 def addfoliun(local_mapas, local_cobertura):
