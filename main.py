@@ -25,10 +25,10 @@ Configuracao = {"urb": 1, "veg": 1, "precisao": 4, "largura_da_rua": 22.5, "alt_
 radio1 = {'nome': '"RF7800V-HH"', 'sensibilidade': -116, 'faixa_de_freq': [30, 108],
           'potencia': {'tipo': 1, 'valor': [0.25, 1, 2, 5, 10]},
           'antenas': [{'nome': 'wip', 'tiopo': 0, 'ganho': 0}, {'nome': 'bade', 'tiopo': 0, 'ganho': 1}]}
-radio2 = {'nome': 'APX2000-(Motorola Portátil)', 'sensibilidade': -102, 'faixa_de_freq': [806, 870],
+radio2 = {'nome': 'APX2000-(Motorola Portátil)', 'sensibilidade': -119, 'faixa_de_freq': [806, 870],
           'potencia': {'tipo': 0, 'valor': [1, 3]},
           'antenas': [{'nome': 'wip', 'tiopo': 0, 'ganho': 3}]}
-radio3 = {'nome': 'APX2500-(Motorola Veicular)', 'sensibilidade': -121, 'faixa_de_freq': [806, 870],
+radio3 = {'nome': 'APX2500-(Motorola Veicular)', 'sensibilidade': -121.5, 'faixa_de_freq': [806, 870],
           'potencia': {'tipo': 0, 'valor': [3, 35]},
           'antenas': [{'nome': 'wip', 'tiopo': 0, 'ganho': 3}]}
 radio4 = {'nome': 'RF7800W', 'sensibilidade': -98, 'faixa_de_freq': [4900, 5850],
@@ -936,6 +936,7 @@ def addfoliun(local_mapas, local_cobertura):
                                        attr='google',
                                        name='google maps street view',
                                        max_zoom=20,
+
                                        subdomains=['mt0', 'mt1', 'mt2', 'mt3'],
                                        overlay=False,
                                        control=True).add_to(folium_map)
