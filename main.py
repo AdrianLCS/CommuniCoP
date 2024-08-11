@@ -1206,6 +1206,7 @@ def ptp():
                             g2 = j['ganho']
 
             f = float(request.form.get("f"))
+            modelo = request.form.get("modelo")
             dem, dsm, landcover, distancia, r_global = perfil(p1, p2, local_Configuracao)
             Densidade_urbana = 0.9
             d, hg1, hg2, dl1, dl2, teta1, teta2, he1, he2, Dh, h_urb, visada, indice_visada_r, indice_visada = obter_dados_do_perfil(
