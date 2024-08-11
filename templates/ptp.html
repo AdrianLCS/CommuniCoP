@@ -21,8 +21,16 @@
                     {% endfor %}
                 </select>
 
-            <label for="f">Frequência</label>
+            <label for="f">Frequência em MHz</label>
             <input type="text" id="f" name="f" required>
+
+            <label for="modelo">Modelo de propagação</label>
+            <select id="modelo" name="modelo" required>
+                <option>ITM VEG URB</option>
+                <option>Ray Tracing</option>
+            </select>
+
+
 
             <button>Calcular perda</button>
         </form>
