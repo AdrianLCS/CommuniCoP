@@ -383,7 +383,7 @@ def criaimg(dem_file, nova_cobertura, cormin, cormax):
     """colors = [(1, 0, 0),(0.75, 0.25, 0),(0.5, 0.5, 0), (0.25, 0.75, 0),
               (0, 1, 0),(0, 0.75, 0.25),(0, 0.25, 0.5), (0, 0.12, 0.75),
               (0, 0, 1),(0.25, 0.25, 1),(0.5, 0.5, 1), (0.75, 0.75, 1), (1, 1, 1)]  # Vermelho -> Verde -> Azul -> Branco"""
-    colors = [(1, 0, 0), (1, 1, 0), (1, 1, 1)]
+    colors = [(1, 0, 0),(1, 0.25, 0.25),(1, 0.5, 0.5),(1, 0.75, 0.25), (1, 1, 0),(1, 1, 0.25), (1, 1, 0.5),(1, 1, 0.5), (1, 1, 1)]
     cmap = LinearSegmentedColormap.from_list('custom_cmap', colors, N=1000)
     dem_dataset = rasterio.open(dem_file)
 
