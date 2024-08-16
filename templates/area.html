@@ -1,27 +1,78 @@
 {% extends 'base.html' %}
-{%block conteudo%}
+{% block conteudo %}
 
 <body>
-    <div id="AddPoint" style="height: 15%;">
-        <h2 style="text-align: center;">Predicão em Área</h2>
-    <ol>
-        <form action="{{url_for('area')}}" method="post">
-            <label for="ponto">Estação fixa</label>
-            <input type="text" id="ponto" name="ponto" required>
+    <div id="AddPoint">
+        <h2>Predição em Área</h2>
+        <form action="{{ url_for('area') }}" method="post">
+            <div class="form-group">
+                <label for="ponto">Estação fixa</label>
+                <input type="text" id="ponto" name="ponto" required>
+            </div>
 
-            <label for="ponto2">Estação móvel</label>
-            <input type="text" id="ponto2" name="ponto2" required>
+            <div class="form-group">
+                <label for="ponto2">Estação móvel</label>
+                <input type="text" id="ponto2" name="ponto2" required>
+            </div>
 
-            <label for="raio">Raio</label>
-            <input type="text" id="raio" name="raio" required>
+            <div class="form-group">
+                <label for="raio">Raio</label>
+                <input type="text" id="raio" name="raio" required>
+            </div>
 
-            <label for="f">Frequência (MHz)</label>
-            <input type="text" id="f" name="f" required>
+            <div class="form-group">
+                <label for="f">Frequência (MHz)</label>
+                <input type="text" id="f" name="f" required>
+            </div>
 
-            <button>Calcular perda</button>
+            <button type="submit">Calcular perda</button>
         </form>
-    </ol>
     </div>
 
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        #AddPoint {
+            padding: 20px;
+        }
+
+        h2 {
+            text-align: center;
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+
+        button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin-top: 20px;
+            background-color: #007BFF;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
 </body>
-{% endblock conteudo%}
+{% endblock conteudo %}

@@ -1,30 +1,46 @@
 {% extends 'base.html' %}
-{%block conteudo%}
+{% block conteudo %}
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div id="addradio" class="card">
+                    <div class="card-header text-center">
+                        <h2>Adição de rádios</h2>
+                    </div>
+                    <div class="card-body">
+                        <form action="{{ url_for('addradio') }}" method="post">
+                            <div class="form-group mb-3">
+                                <label for="nome">Nome</label>
+                                <input type="text" class="form-control" id="nome" name="nome" required>
+                            </div>
 
-<body>
-    <div id="addradio" style="height: 15%;">
-        <h2 style="text-align: center;">Adição de rádios</h2>
-    <ol>
-        <form action="{{url_for('addradio')}}" method="post">
-            <label for="nome">Nome</label>
-            <input type="text" id="nome" name="nome" required>
+                            <div class="form-group mb-3">
+                                <label for="sens">Sensibilidade em dBm</label>
+                                <input type="text" class="form-control" id="sens" name="sens" required>
+                            </div>
 
-            <label for="sens">Sensibilidade em dBm</label>
-            <input type="text" id="sens" name="sens" required>
+                            <div class="form-group mb-3">
+                                <label for="pott">Potência de Transmissão em W</label>
+                                <input type="text" class="form-control" id="pott" name="pott" required>
+                            </div>
 
-            <label for="pott">Potência de Transmissão em W</label>
-            <input type="text" id="pott" name="pott" required>
+                            <div class="form-group mb-3">
+                                <label for="nomeant">Nome da Antena</label>
+                                <input type="text" class="form-control" id="nomeant" name="nomeant" required>
+                            </div>
 
-            <label for="nomeant">Nome da Antena</label>
-            <input type="text" id="nomeant" name="nomeant" required>
+                            <div class="form-group mb-3">
+                                <label for="gan">Ganho da Antena em dB</label>
+                                <input type="text" class="form-control" id="gan" name="gan" required>
+                            </div>
 
-            <label for="gan">Ganho da Antena em dB</label>
-            <input type="text" id="gan" name="gan" required>
-
-            <button>Adicionar Rádio</button>
-        </form>
-    </ol>
+                            <div class="text-center">
+                                <button type="submit" class="btn btn-primary">Adicionar Rádio</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-
-</body>
-{% endblock conteudo%}
+{% endblock conteudo %}

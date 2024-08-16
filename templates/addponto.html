@@ -1,6 +1,86 @@
 {% extends 'base.html' %}
-{%block conteudo%}
-     <script>
+{% block conteudo %}
+    <div class="container mt-5">
+        <div class="row">
+            <div class="col-md-6">
+                <div id="AddPoint" class="card mb-3">
+                    <div class="card-header text-center">
+                        <h2>Adicionar Ponto</h2>
+                    </div>
+                    <div class="card-body">
+                        <form id="markerForm">
+                            <div class="form-group mb-3">
+                                <label for="nome">Nome</label>
+                                <input type="text" class="form-control" id="nome" name="nome" required>
+                            </div>
+
+                            <div class="form-group mb-3">
+                                <label for="lat">Latitude</label>
+                                <input type="text" class="form-control" id="lat" name="lat" required>
+                            </div>
+
+                            <div class="form-group mb-3">
+                                <label for="lon">Longitude</label>
+                                <input type="text" class="form-control" id="lon" name="lon" required>
+                            </div>
+
+                            <div class="form-group mb-3">
+                                <label for="selectRadios">Selecione um rádio</label>
+                                <select class="form-control" id="selectRadios" onchange="atualizarPotenciaEAntenna()" name="radio">
+                                    {% for radio in radios %}
+                                        <option value="{{ radio.nome }}">{{ radio.nome }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="form-group mb-3" id="potenciaSection">
+                                <label>Potência</label>
+                                <select class="form-control" id="selectPotencia" style="display: none;" name="pot"></select>
+                                <input type="text" class="form-control" id="inputPotencia" style="display: none;" name="pot" />
+                            </div>
+
+                            <div class="form-group mb-3">
+                                <label for="selectAntenas">Selecione uma antena</label>
+                                <select class="form-control" id="selectAntenas" style="display: none;" name="ant"></select>
+                            </div>
+
+                            <div class="form-group mb-3">
+                                <label for="h">Altura da antena</label>
+                                <input type="text" class="form-control" id="h" name="h" required>
+                            </div>
+
+                            <div class="text-center">
+                                <button type="button" class="btn btn-primary" onclick="addMarker()">Adicionar Marcador</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header text-center">
+                        <h2>Excluir Ponto</h2>
+                    </div>
+                    <div class="card-body">
+                        <form action="{{ url_for('ptp') }}" method="post">
+                            <div class="form-group mb-3">
+                                <label for="ponto1">Selecione o ponto</label>
+                                <select class="form-control" id="ponto1" name="ponto1" required>
+                                    {% for marker in markers %}
+                                        <option>{{ marker["nome"] }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="text-center">
+                                <button type="submit" class="btn btn-danger">Excluir Ponto</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
         function atualizarPotenciaEAntenna() {
             const nomeSelecionado = document.getElementById('selectRadios').value;
             fetch(`/get_radio/${nomeSelecionado}`)
@@ -41,59 +121,7 @@
                     selectAntenas.style.display = 'block';
                 });
         }
-    </script>
-<body>
-    <div id="AddPoint" style="height: 15%;">
-        <h1>Adicionar ponto</h1>
-        <ol>
-	        <form id="markerForm">
-		        <label for="nome">Nome</label>
-                <input type="text" id="nome" name="nome" required>
 
-                <label for="lat">Latitude:</label>
-                <input type="text" id="lat" name="lat" required>
-
-                <label for="lon">Longitude:</label>
-                <input type="text" id="lon" name="lon" required>
-
-   <label for="selectRadios">Selecione um rádio:</label>
-    <select id="selectRadios" onchange="atualizarPotenciaEAntenna()" name="radio">
-        {% for radio in radios %}
-            <option value="{{ radio.nome }}">{{ radio.nome }}</option>
-        {% endfor %}
-    </select>
-
-    <br><br>
-    <label>Potência:</label>
-    <select id="selectPotencia" style="display: none;" name="pot"></select>
-    <input type="text" id="inputPotencia" style="display: none;" name="pot" />
-
-    <br><br>
-
-    <label for="selectAntenas">Selecione uma antena:</label>
-    <select id="selectAntenas" style="display: none;" name="ant"></select>
-
-                <label for="h">Altura da antena:</label>
-                <input type="text" id="h" name="h" required>
-
-
-                <button type="button" onclick="addMarker()">Adicionar Marcador</button>
-	        </form>
-        </ol>
-    </div>
-
-
-    <h2>Excluir ponto</h2>
-            <form action="{{url_for('ptp')}}" method="post">
-                <label for="ponto1">Selecione o ponto</label>
-                <select id="ponto1" name="ponto1" required>
-                        {%for marker in markers%}
-                        <option>{{marker["nome"]}}</option>
-                        {% endfor %}
-                </select>
-            </form>
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-    <script>
         // Função para adicionar marcador
         function addMarker(lat, lon) {
             var formData = new FormData(document.getElementById('markerForm'));
@@ -117,6 +145,4 @@
             });
         }
     </script>
-
-</body>
-{% endblock conteudo%}
+{% endblock conteudo %}

@@ -4,11 +4,14 @@ from flask import Flask, render_template, redirect, url_for, request, session, j
 import os
 import folium
 import pickle
+from matplotlib.colors import LinearSegmentedColormap
 from folium.plugins import HeatMap
 import branca.colormap
 import matplotlib.pyplot as plt
 import Modelos
 from PIL import Image
+import RayTracing
+import shp_extrair
 
 # Váriaves Globais
 app = Flask(__name__)
@@ -20,7 +23,13 @@ users = {'adrian': 'adrian', 'user2': 'password2'}
 c = 299792458  # m/s
 a = 6378137  # m
 b = 6356752  # m
-Configuracao = {"urb": 1, "veg": 1, "precisao": 4, "largura_da_rua": 22.5, "alt_max": 100, 'sit': 70}
+sigma_solo = 0.005  # S/m
+er_solo = 15
+er_concreto = 5.24
+conreto_c = 0.0462
+conreto_d = 0.7822
+
+Configuracao = {"urb": 1, "veg": 1, "precisao": 4, "largura_da_rua": 22.5, "alt_max": 1000, 'sit': 70}
 # Criar opção de adiconar rádio #sensibilidade em e potencia W ganho em dB frequencia em MHz
 radio1 = {'nome': '"RF7800V-HH"', 'sensibilidade': -116, 'faixa_de_freq': [30, 108],
           'potencia': {'tipo': 1, 'valor': [0.25, 1, 2, 5, 10]},
@@ -346,11 +355,11 @@ def modificar_e_salvar_raster(raster_path, ponto, raio, limear, ht, hr, f, preci
                             p = (espaco_livre + itm + vegetacao + urb + variabilidade_situacao)
 
                         if p <= limear:
-                            data[linha][coluna] = 2
+                            data[linha][coluna] = p
                         else:
-                            data[linha][coluna] = 100
+                            data[linha][coluna] = limear
                 else:
-                    data[linha][coluna] = 100
+                    data[linha][coluna] = limear
 
         # Atualizar os metadados do raster
         # src.write(data, 1)
@@ -366,24 +375,32 @@ def modificar_e_salvar_raster(raster_path, ponto, raio, limear, ht, hr, f, preci
     return pasta + file
 
 
-def criaimg(dem_file, nova_cobertura):
+def criaimg(dem_file, nova_cobertura, cormin, cormax):
     """Essa função é usada para criar uma imagem a partir de um Raster de canal único, é usada para formar a imagem
     que será visualizada como área de cobertura. O raster usado na entrada da função é gerado pela função
     modificar_e_salvar_raster """
     # Carregar o arquivo DEM (tif)
+    """colors = [(1, 0, 0),(0.75, 0.25, 0),(0.5, 0.5, 0), (0.25, 0.75, 0),
+              (0, 1, 0),(0, 0.75, 0.25),(0, 0.25, 0.5), (0, 0.12, 0.75),
+              (0, 0, 1),(0.25, 0.25, 1),(0.5, 0.5, 1), (0.75, 0.75, 1), (1, 1, 1)]  # Vermelho -> Verde -> Azul -> Branco"""
+    colors = [(1, 0, 0), (1, 1, 0), (1, 1, 1)]
+    cmap = LinearSegmentedColormap.from_list('custom_cmap', colors, N=1000)
     dem_dataset = rasterio.open(dem_file)
 
     # Ler os dados do DEM como uma matriz NumPy
     dem_data = dem_dataset.read(1, masked=True)  # Assumindo que os dados estão no primeiro canal
 
     # Configurar a figura e os eixos para o gráfico sem eixos e títulos
-    fig, ax = plt.subplots(figsize=(100, 100))
+    """fig, ax = plt.subplots(figsize=(100, 100))
     ax.axis('off')
 
     # Criar um mapa de cores para representar as altitudes do terreno
     cmap = plt.get_cmap('terrain')
     im = ax.imshow(dem_data, cmap=cmap, extent=[dem_dataset.bounds.left, dem_dataset.bounds.right,
-                                                dem_dataset.bounds.bottom, dem_dataset.bounds.top])
+                                                dem_dataset.bounds.bottom, dem_dataset.bounds.top])"""
+    plt.figure(figsize=(dem_data.shape[1] / 100, dem_data.shape[0] / 100), dpi=100)
+    plt.imshow(dem_data, cmap=cmap, vmin=cormin, vmax=cormax)
+    plt.axis('off')
 
     # Salvar a imagem em um arquivo sem títulos, eixos e barra de cores
     plt.savefig('Raster/modificado/' + nova_cobertura + ".png", format="png", bbox_inches='tight', pad_inches=0)
@@ -578,8 +595,10 @@ def obter_dados_do_raster(indice_atual, r, dem, dsm, landcover, d, distancia, ar
 
                     alt_dem = raster[int(pixel_y1)][int(pixel_x1)]
 
-                    d.append(dist)
-                    dem.append(alt_dem)
+                    # d.append(dist)
+                    d[i] = dist
+                    # dem.append(alt_dem)
+                    dem[i] = alt_dem
                     indice_atual = i
                 else:
                     indice_atual = i
@@ -747,8 +766,13 @@ def ajuste(elevacao, distancia, hg1, hg2, dl1, dl2):
         u = u + 5
     # z = np.array(zorig)
     # x = np.array(xorig)
-    z = np.array(z)
-    x = np.array(x)
+    if len(zorig) > 100:
+        z = np.array(z)
+        x = np.array(x)
+    else:
+        z = np.array(zorig)
+        x = np.array(xorig)
+
     # ajuste
     n = len(x)
     sx = 0
@@ -850,13 +874,13 @@ def obter_vegeta_atravessada(f, indice, dem, landcover, dsm, hr, ht, distancia, 
             y = m * x + c
             los = y - (dem - (dem[-1] + hr))
         for i in range(len(los) - 1):
-            if los[i] < (rfresn3 * abs((len(los) - 1)/2)-(((len(los) - 1)/2)-i)):
+            if los[i] < (rfresn3 * abs((len(los) - 1) / 2) - (((len(los) - 1) / 2) - i)):
                 contar0 = contar0 + 1
             if los[i] < altur_da_cobertuta[i]:
                 for n in (0, 1, 2):
                     if landcover[3 * (indice + i) + n] == 10:
                         espesura = espesura + 10  # ( colocar 5, metade dos 10 m)
-        #if (espesura > 100):#(contar0 > 0) and (espesura > 100):
+        # if (espesura > 100):#(contar0 > 0) and (espesura > 100):
         #    espesura = espesura / 2
 
 
@@ -886,8 +910,8 @@ def obter_vegeta_atravessada(f, indice, dem, landcover, dsm, hr, ht, distancia, 
         contar1 = 0
         contar2 = 0
 
-        #print(altur_da_cobertuta)
-        #print(landcover[3 * (indice - 1) + 1:])
+        # print(altur_da_cobertuta)
+        # print(landcover[3 * (indice - 1) + 1:])
         for i in range(len(los)):
 
             if los[i] < altur_da_cobertuta[i]:
@@ -897,13 +921,13 @@ def obter_vegeta_atravessada(f, indice, dem, landcover, dsm, hr, ht, distancia, 
                     if landcover[3 * (indice + i - 1) + n + 1] == 10:
                         espesura = espesura + 10  # ( colocar 5, metade dos 10 m)
 
-        #if (espesura > 100):#(contar1 > 0) and (espesura > 100):#
+        # if (espesura > 100):#(contar1 > 0) and (espesura > 100):#
         #    espesura = espesura / 2
         ref = espesura
-        #print(ref)
+        # print(ref)
         altur_da_cobertuta2 = abs(dsm[:indice_d + 1] - dem[:indice_d + 1])
-        #print(altur_da_cobertuta2)
-        #print(landcover[:3 * len(los2)])
+        # print(altur_da_cobertuta2)
+        # print(landcover[:3 * len(los2)])
         for i in range(len(los2)):
             if los2[i] < altur_da_cobertuta2[i]:
                 if los2[i] < ((rfresn2 * (len(los2) - i) / (len(los2)))):
@@ -912,10 +936,10 @@ def obter_vegeta_atravessada(f, indice, dem, landcover, dsm, hr, ht, distancia, 
                     if landcover[3 * i + n] == 10:
                         espesura = espesura + 10  # ( colocar 5, metade dos 10 m)
 
-        #if (espesura-ref > 100):#(contar2 > 0) and (espesura-ref > 100):
+        # if (espesura-ref > 100):#(contar2 > 0) and (espesura-ref > 100):
         #    espesura = ref + (espesura - ref) / 2
 
-        #print(espesura)
+        # print(espesura)
     return 0.4 * espesura  # considerando 40% da area coberta com vegetação elevada. a documentação dos dados estabelec 10% ou mais
 
 
@@ -1164,23 +1188,31 @@ def ptp():
     local_Configuracao = session['Configuracao']
     local_radios = session['radios']
     local_perdas = {}
+    parametros_do_radio = []
     fig_name = ''
     figura = ''
     ht, hr, potenciat, potenciar, sensibilidadet, sensibilidader, g1, g2 = 0, 0, 0, 0, 0, 0, 0, 0
     p1 = ()
     p2 = ()
-    if request.method == "POST":
+    pt1=''
+    pt2=''
+    perda_raytracing='Não Calculado'
+    radt, radr = 'Não definido','Não definido'
 
+    if request.method == "POST":
+        pt1=request.form.get("ponto1")
+        pt2=request.form.get("ponto2")
         # calcular perda Aqui antes das operacoes abaixo
-        if request.form.get("ponto1") and request.form.get("ponto2") and request.form.get("f"):
+        if pt1 and pt2 and request.form.get("f"):
             fig_name = str(request.form.get("ponto1")) + "_" + str(request.form.get("ponto2"))
             for i in local_markers:
-                if i['nome'] == request.form.get("ponto1"):
+                if i['nome'] == pt1:
                     p1 = (i['lon'], i['lat'])
                     ht = i['h']
                     potenciat = float(i['pot'])
                     ant = i['ant']
                     num = 0
+                    radt=i['nome']
                     for y in range(len(local_radios)):
                         if local_radios[y]['nome'] == i['radio']:
                             num = y
@@ -1190,12 +1222,13 @@ def ptp():
                         if j['nome'] == ant:
                             g1 = j['ganho']
 
-                elif i['nome'] == request.form.get("ponto2"):
+                elif i['nome'] == pt2:
                     p2 = (i['lon'], i['lat'])
                     hr = i['h']
                     potenciar = float(i['pot'])
                     ant = i['ant']
                     num = 0
+                    radr = i['nome']
                     for y in range(len(local_radios)):
                         if local_radios[y]['nome'] == i['radio']:
                             num = y
@@ -1217,7 +1250,6 @@ def ptp():
                 urban = 'n'
             yt = 1  # é a perda pelo clima, adotar esse valor padrao inicialmente
             qs = round(float(local_Configuracao['sit']) / 10)  # 70% das situacões
-
             espesura = obter_vegeta_atravessada(f, indice_visada_r, dem, landcover, dsm, hr, ht, distancia,
                                                 indice_visada)
 
@@ -1272,6 +1304,28 @@ def ptp():
             else:
                 potencia_dbw = pott2 + g1 + g2
                 sensi_ref = sensibilidadet
+
+            if modelo == 'Ray Tracing':
+                if visada:
+                    p3 = tuple(p1)
+                    p4 = tuple(p2)
+                    print(p3)
+                    print(p4)
+                    shapefile_path = 'shapefiles/osm_urca.shp'
+                    shapefile_path = shp_extrair.extrarir_do_rio(p3, p4)
+                    shapeData = RayTracing.load_shapefile(shapefile_path)
+                    sigma_conreto = conreto_c * (f * 1e6) ** conreto_d
+                    ray_paths, quinas, distancia_rays = RayTracing.trace_rays(shapeData, p3, p4, num_azimuths=1000,
+                                                                              max_reflections=3, max_diffractions=1)
+                    perda_raytracing = RayTracing.calcula_enlace(p3, p4, hg1, hg2, ray_paths, er_concreto, er_solo,
+                                                                 sigma_conreto, sigma_solo)
+                    perda_raytracing = round(perda_raytracing*10)/10
+
+                else:
+                    perda_raytracing = "Não Calculado"
+
+
+            parametros_do_radio=[[radt, pott1,g1,sensibilidadet],[radr, pott2,g2,sensibilidader]]
             local_perdas = {'ponto1': request.form.get("ponto1"),
                             'ponto2': request.form.get("ponto2"),
                             'f': f,
@@ -1280,14 +1334,9 @@ def ptp():
                             'veg ': round(10 * vegetacao) / 10,
                             'terreno': round(10 * Perda_por_terreno) / 10,
                             'perda': round(10 * perda) / 10,
-                            'pott1': pott1,
-                            'pott2': pott2,
-                            'ganho1': g1,
-                            'ganho2': g2,
                             'potr1': potr1,
                             'potr2': potr2,
-                            'sensp1': sensibilidadet,
-                            'sensp2': sensibilidader,
+                            'Ray_t': perda_raytracing,
                             'resultado': resultado}
 
             vet_perdas = np.zeros(len(dem))
@@ -1351,7 +1400,8 @@ def ptp():
             # fig.figure(figsize=(10, 5))
             fig.savefig(figura, format="jpg")
 
-    return render_template('ptp.html', perdas=local_perdas, markers=local_markers, figura=figura)
+    return render_template('ptp.html', perdas=local_perdas, markers=local_markers, figura=figura,
+                           parametros_do_radio=parametros_do_radio, pt2=pt2,pt1=pt1)
 
 
 @app.route('/area', methods=['GET', 'POST'])
@@ -1407,7 +1457,7 @@ def area():
                                             float(request.form.get("f")), precisao, largura_da_rua, local_Configuracao)
 
         nova_cobertura = request.form.get("ponto") + '_Area_de_cobertura' + '_' + request.form.get("f")
-        img = criaimg(caminho, nova_cobertura)
+        img = criaimg(caminho, nova_cobertura, limear-50,limear)
         novo = 0
         for i in local_cobertura:
             if i['nome'] == nova_cobertura:
@@ -1431,7 +1481,7 @@ def conf():
         local_Configuracao = {"urb": int(request.form.get("urb")), "veg": int(request.form.get("veg")),
                               "precisao": float(request.form.get("precisao")),
                               "largura_da_rua": float(request.form.get("larg")),
-                              "alt_max": float(request.form.get("alt")),
+                              "alt_max": 1000,
                               "sit": float(request.form.get("sit"))}
         session['Configuracao'] = local_Configuracao
 
@@ -1535,7 +1585,6 @@ def get_radio(nome):
                 'antenas': [antena['nome'] for antena in ra['antenas']]
             })
     return jsonify({})
-
 
 
 @app.route('/projetos', methods=['GET', 'POST'])

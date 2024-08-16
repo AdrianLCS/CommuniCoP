@@ -308,14 +308,15 @@ def trace_rays(shapeData, tx_position, rx_position, num_azimuths=1000, max_refle
 # Example usage
 shapefile_path = 'shapefiles/osm_urca.shp'
 shapeData = load_shapefile(shapefile_path)
-tx1_position = (-43.170956, -22.953926, 0)  # tx_position=(-43.1726616,-22.9536628,0)#
-rx1_position = (-43.170104, -22.953798, 0)  # rx_position = (-43.1723437,-22.9537710, 0)#
+tx1_position = (-43.1750389,-22.9531831)#(-43.1750461, -22.9531651) #(-43.170956, -22.953926, 0)  # tx_position=(-43.1726616,-22.9536628,0)#
+rx1_position =(-43.1743285,-22.9531298) #(-43.1743393, -22.9531336)  #(-43.170104, -22.953798, 0)  # rx_position = (-43.1723437,-22.9537710, 0)#
 num_azimuths = 300
 f = 800
-ray_paths, quinas, distancia = trace_rays(shapeData, tx1_position, rx1_position, num_azimuths=num_azimuths,
+"""ray_paths, quinas, distancia = trace_rays(shapeData, tx1_position, rx1_position, num_azimuths=num_azimuths,
                                           max_reflections=0, max_diffractions=1, diffraction_distance=1 / (3600 * 15))
+"""
 print('quinas')
-print(quinas)
+#print(quinas)
 tx1_position = np.array(tx1_position)
 rx1_position = np.array(rx1_position)
 polarizacao = 'V'
@@ -462,6 +463,6 @@ def calcula_enlace(tx_position, rx_position, hg1, hg2, ray_paths, er, ersolo, si
     return A
 
 
-A = calcula_enlace(tx1_position, rx1_position, h1, h2, ray_paths, er, er, sigma, sigma)
+#A = calcula_enlace(tx1_position, rx1_position, h1, h2, ray_paths, er, er, sigma, sigma)
 
 # função que recebe o caminho do shapefilie

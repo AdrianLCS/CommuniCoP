@@ -1,76 +1,161 @@
 {% extends 'base.html' %}
-{%block conteudo%}
-
+{% block conteudo %}
 <body>
-    <div id="AddPoint" style="height: 15%;">
-        <h2 style="text-align: center;">Predição PTP</h2>
-    <ol>
-
-        <form action="{{url_for('ptp')}}" method="post">
-            <label for="ponto1">Ponto 1</label>
-            <select id="ponto1" name="ponto1" required>
-                    {%for marker in markers%}
-                    <option>{{marker["nome"]}}</option>
+    <div id="AddPoint">
+        <h2>Predição PTP</h2>
+        <form action="{{ url_for('ptp') }}" method="post">
+            <div class="form-group">
+                <label for="ponto1">Ponto 1</label>
+                <select id="ponto1" name="ponto1" required>
+                    {% for marker in markers %}
+                    <option>{{ marker["nome"] }}</option>
                     {% endfor %}
                 </select>
+            </div>
 
-            <label for="ponto2">Ponto 2</label>
-            <select id="ponto2" name="ponto2" required>
-                    {%for marker in markers%}
-                    <option>{{marker["nome"]}}</option>
+            <div class="form-group">
+                <label for="ponto2">Ponto 2</label>
+                <select id="ponto2" name="ponto2" required>
+                    {% for marker in markers %}
+                    <option>{{ marker["nome"] }}</option>
                     {% endfor %}
                 </select>
+            </div>
 
-            <label for="f">Frequência em MHz</label>
-            <input type="text" id="f" name="f" required>
+            <div class="form-group">
+                <label for="f">Frequência em MHz</label>
+                <input type="text" id="f" name="f" required>
+            </div>
 
-            <label for="modelo">Modelo de propagação</label>
-            <select id="modelo" name="modelo" required>
-                <option>ITM VEG URB</option>
-                <option>Ray Tracing</option>
-            </select>
+            <div class="form-group">
+                <label for="modelo">Modelo de propagação</label>
+                <select id="modelo" name="modelo" required>
+                    <option>ITM VEG URB</option>
+                    <option>Ray Tracing</option>
+                </select>
+            </div>
 
-
-
-            <button>Calcular perda</button>
+            <button type="submit">Calcular perda</button>
         </form>
-        <style>
-            table {
-                border-collapse: separate; /* Bordas separadas */
-                border-spacing: 10px; /* Define espaçamento entre células */
-            }
-        </style>
-        <table border="1">
-            <tr>
-                <th>P1  </th>
-                <th>P2  </th>
-                <th>Freq MHz </th>
-                <th>FSL (dB) </th>
-                <th>Perda Urb (dB) </th>
-                <th >Perda Veg (dB) </th>
-                <th>Perda Relevo (dB) </th>
-                <th>Perda Total (dB)  </th>
-                <th>Pot Tx P1 (dBm)  </th>
-                <th>Pot Tx P2  (dBm) </th>
-                <th>Ganho P1 (dB) </th>
-                <th>Ganho P2 (dB) </th>
-                <th>Pot Rx P1 (dBm) </th>
-                <th>Pot Rx P2 (dBm) </th>
-                <th>Sensibilidade P1 (dBm) </th>
-                <th>Sensibilidade P2 (dBm) </th>
-                <th>Estimativa  </th>
-            </tr>
 
+        <h3>Rádio no Ponto {{ pt1 }}</h3>
+        <table>
             <tr>
-            {%for chave, valor in perdas.items()%}
-                <td>{{valor}}</td>
-            {% endfor %}
+                <th>Nome</th>
+                <th>Potência de transmissão</th>
+                <th>Ganho da antena (dBi)</th>
+                <th>Sensibilidade (dBm)</th>
+            </tr>
+            <tr>
+                {% for i in parametros_do_radio[0] %}
+                <td>{{ i }}</td>
+                {% endfor %}
             </tr>
         </table>
-        <img src="{{ figura }}" alt="Imagem">
 
-    </ol>
+        <h3>Rádio no Ponto {{ pt2 }}</h3>
+        <table>
+            <tr>
+                <th>Nome</th>
+                <th>Potência de transmissão</th>
+                <th>Ganho da antena (dBi)</th>
+                <th>Sensibilidade (dBm)</th>
+            </tr>
+            <tr>
+                {% for i in parametros_do_radio[1] %}
+                <td>{{ i }}</td>
+                {% endfor %}
+            </tr>
+        </table>
+
+        <h3>Parâmetros do enlace</h3>
+        <table>
+            <tr>
+                <th>P1</th>
+                <th>P2</th>
+                <th>Freq MHz</th>
+                <th>FSL (dB)</th>
+                <th>Perda Urb (dB)</th>
+                <th>Perda Veg (dB)</th>
+                <th>Perda Relevo (dB)</th>
+                <th>Perda Total (dB)</th>
+                <th>Pot recebida no {{ pt1 }} (dBm)</th>
+                <th>Pot recebida {{ pt2 }} (dBm)</th>
+                <th>Perda pelo modelo Ray Tracing</th>
+                <th>Estimativa</th>
+            </tr>
+            <tr>
+                {% for chave, valor in perdas.items() %}
+                <td>{{ valor }}</td>
+                {% endfor %}
+            </tr>
+        </table>
+
+        <img src="{{ figura }}" alt="Imagem">
     </div>
 
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        #AddPoint {
+            padding: 20px;
+        }
+
+        h2, h3 {
+            text-align: center;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+
+        form {
+            max-width: 600px;
+            margin: 0 auto 20px auto;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+
+        button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin-top: 20px;
+            background-color: #007BFF;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        table, th, td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: center;
+        }
+    </style>
 </body>
-{% endblock conteudo%}
+{% endblock conteudo %}

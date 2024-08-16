@@ -1,34 +1,83 @@
 {% extends 'base.html' %}
-{%block conteudo%}
+{% block conteudo %}
 
 <body>
-    <div id="config" style="height: 15%;">
-        <h2 style="text-align: center;">Parâmetros de Configuração</h2>
-    <ol>
-        <form action="{{url_for('conf')}}" method="post">
-            <label for="urb">calcular perda urbana?</label>
-            <input type="text" id="urb" name="urb" required>
+    <div id="config">
+        <h2>Parâmetros de Configuração</h2>
+        <form action="{{ url_for('conf') }}" method="post">
+            <div class="form-group">
+                <label for="urb">Calcular perda urbana?</label>
+                <input type="text" id="urb" name="urb" required>
+            </div>
 
-            <label for="veg">calcular perda em vegetação?</label>
-            <input type="text" id="veg" name="veg" required>
+            <div class="form-group">
+                <label for="veg">Calcular perda em vegetação?</label>
+                <input type="text" id="veg" name="veg" required>
+            </div>
 
-            <label for="precisao">Precisão azimultal de predição de área em graus</label>
-            <input type="text" id="precisao" name="precisao" required>
+            <div class="form-group">
+                <label for="precisao">Precisão azimultal de predição de área em graus</label>
+                <input type="text" id="precisao" name="precisao" required>
+            </div>
 
-            <label for="larg">Largura média da rua em área urbana</label>
-            <input type="text" id="larg" name="larg" required>
+            <div class="form-group">
+                <label for="larg">Largura média da rua em área urbana</label>
+                <input type="text" id="larg" name="larg" required>
+            </div>
 
-            <label for="alt">Altura máxima das construções em área urbana</label>
-            <input type="text" id="alt" name="alt" required>
+            <div class="form-group">
+                <label for="sit">Confiabilidade (de 50% a 90%)</label>
+                <input type="text" id="sit" name="sit" required>
+            </div>
 
-            <label for="sit">Variabilidade da situação (50 a 100. 100 para predições mais pessimistas e 50 para mais otimistas)</label>
-            <input type="text" id="sit" name="sit" required>
-
-
-            <button>Setar configuração</button>
+            <button type="submit">Setar configuração</button>
         </form>
-    </ol>
     </div>
 
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        #config {
+            padding: 20px;
+        }
+
+        h2 {
+            text-align: center;
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+
+        button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin-top: 20px;
+            background-color: #007BFF;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
 </body>
-{% endblock conteudo%}
+{% endblock conteudo %}
