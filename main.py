@@ -1194,8 +1194,8 @@ def ptp():
     ht, hr, potenciat, potenciar, sensibilidadet, sensibilidader, g1, g2 = 0, 0, 0, 0, 0, 0, 0, 0
     p1 = ()
     p2 = ()
-    pt1=''
-    pt2=''
+    pt1='ponto 1'
+    pt2='ponto 2'
     perda_raytracing='Não Calculado'
     radt, radr = 'Não definido','Não definido'
 
