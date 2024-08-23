@@ -1,11 +1,11 @@
 {% extends 'base.html' %}
 {% block conteudo %}
     <div class="container mt-5">
-        <div class="row">
-            <div class="col-md-6">
+        <div class="d-flex justify-content-center">
+            <div class="col-md-8">
                 <div id="AddPoint" class="card mb-3">
                     <div class="card-header text-center">
-                        <h2>Adicionar Ponto</h2>
+                        <h2>Adicionar Uma Estação Rádio</h2>
                     </div>
                     <div class="card-body">
                         <form id="markerForm">
@@ -58,7 +58,7 @@
 
                 <div class="card">
                     <div class="card-header text-center">
-                        <h2>Excluir Ponto</h2>
+                        <h2>Excluir Estação</h2>
                     </div>
                     <div class="card-body">
                         <form action="{{ url_for('ptp') }}" method="post">
@@ -90,7 +90,6 @@
                     const inputPotencia = document.getElementById('inputPotencia');
                     const selectAntenas = document.getElementById('selectAntenas');
 
-                    // Atualizar a potência
                     if (data.potencia_tipo === 1) {
                         inputPotencia.style.display = 'none';
                         selectPotencia.innerHTML = '';
@@ -110,7 +109,6 @@
                         inputPotencia.style.display = 'none';
                     }
 
-                    // Atualizar a antena
                     selectAntenas.innerHTML = '';
                     data.antenas.forEach(antena => {
                         const option = document.createElement('option');
@@ -122,7 +120,6 @@
                 });
         }
 
-        // Função para adicionar marcador
         function addMarker(lat, lon) {
             var formData = new FormData(document.getElementById('markerForm'));
             if (lat && lon) {
@@ -137,7 +134,6 @@
             .then(response => response.json())
             .then(data => {
                 if (data.result === 'success') {
-                    // Atualiza a página para exibir o novo marcador
                     location.reload();
                 } else {
                     alert('Falha ao adicionar marcador.');

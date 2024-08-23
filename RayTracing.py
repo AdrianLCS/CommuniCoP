@@ -453,7 +453,7 @@ def calcula_enlace(tx_position, rx_position, hg1, hg2, ray_paths, er, ersolo, si
     ptot = 0
     for caso in parametros:
         # verificar se é o caso clacular a atenuação no espaço livre antes de somar cada caso com ptot
-        ptot = ptot + caso[0] * np.exp(1j * caso[1])
+        ptot = ptot + caso[0] * (d_ref/caso[2]) * np.exp(1j * caso[1])
     if ptot != 0:
         A = 20 * np.log10(1/abs(ptot))
     else:
