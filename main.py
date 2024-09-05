@@ -823,9 +823,12 @@ def obter_dados_do_perfil(dem, dsm, distancia, ht, hr, Densidade_urbana):
     dl1, dl2, teta1, teta2 = d, d, None, None
     maxangulo = aref
     maxangulor = -aref
+    df=distancia[-1]
 
     for i in range(1, len(dem) - 1):
-        angulo.append(np.arctan((dem[i] - (dem[0] + ht)) / distancia[i]))
+        di=distancia[i]
+        #angulo.append(np.arctan(((dem[i]+(di*(df-di))/(2*8470000)) - (dem[0] + ht)) / di))
+        angulo.append(np.arctan((dem[i] - (dem[0] + ht)) / di))
         if angulo[-1] > maxangulo:
             teta1, dl1, idl1 = angulo[i - 1], distancia[i], i
             visada = 0
@@ -833,7 +836,8 @@ def obter_dados_do_perfil(dem, dsm, distancia, ht, hr, Densidade_urbana):
             maxangulo = max(angulo)
 
     for i in range(1, len(demr) - 1):
-        angulor.append(np.arctan((demr[i] - (demr[0] + hr)) / distancia[i]))
+        di = distancia[i]
+        angulor.append(np.arctan((dem[i] - (demr[0] + hr)) / di))
         if angulor[-1] > maxangulor:
             teta2, dl2, idl2 = angulor[i - 1], distancia[i], i
             visadar = 0
