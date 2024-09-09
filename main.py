@@ -1157,10 +1157,11 @@ def index_map():
 
 @app.route('/addponto', methods=['GET', 'POST'])
 def addponto():
+    local_markers=session['markers']
     if 'username' not in session:
         return redirect(url_for('login'))
     rad = session['radios']
-    return render_template('addponto.html', radios=rad)
+    return render_template('addponto.html', radios=rad, markers=local_markers)
 
 
 @app.route('/add_marker', methods=['POST'])
@@ -1309,7 +1310,7 @@ def ptp():
                 potencia_dbw = pott2 + g1 + g2
                 sensi_ref = sensibilidadet
 
-            if modelo == 'Ray Tracing':
+            if modelo == 'Sim':
                 if visada:
                     p3 = tuple(p1)
                     p4 = tuple(p2)
@@ -1473,7 +1474,7 @@ def area():
                  'h': float(ht)})
         session['cobertura'] = local_cobertura
 
-    return render_template('area.html')
+    return render_template('area.html', markers=local_markers)
 
 
 @app.route('/config', methods=['GET', 'POST'])
@@ -1482,7 +1483,16 @@ def conf():
         return redirect(url_for('login'))
 
     if request.method == 'POST':
-        local_Configuracao = {"urb": int(request.form.get("urb")), "veg": int(request.form.get("veg")),
+        if request.form.get("urb") == 'Sim':
+            urb = 1
+        else:
+            urb = 0
+        if request.form.get("veg") == 'Sim':
+            veg = 1
+        else:
+            veg = 0
+
+        local_Configuracao = {"urb": int(urb), "veg": int(veg),
                               "precisao": float(request.form.get("precisao")),
                               "largura_da_rua": float(request.form.get("larg")),
                               "alt_max": 1000,
@@ -1593,9 +1603,14 @@ def get_radio(nome):
 
 @app.route('/projetos', methods=['GET', 'POST'])
 def projetos():
+    import os
+    caminho_pasta = 'planejamentos'
+    arquivos = os.listdir(caminho_pasta)
+    arquivos = [os.path.splitext(f)[0] for f in arquivos if os.path.isfile(os.path.join(caminho_pasta, f))]
+
     if 'username' not in session:
         return redirect(url_for('login'))
-    return render_template('projetos.html')
+    return render_template('projetos.html', arquivos=arquivos)
 
 
 @app.route('/salv', methods=['GET', 'POST'])

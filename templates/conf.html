@@ -7,72 +7,111 @@
         <form action="{{ url_for('conf') }}" method="post">
             <div class="form-group">
                 <label for="urb">Calcular perda urbana?</label>
-                <input type="text" id="urb" name="urb" required>
+                <select id="urb" name="urb" required>
+                    <option value="Sim">Sim</option>
+                    <option value="Não">Não</option>
+                </select>
             </div>
 
             <div class="form-group">
                 <label for="veg">Calcular perda em vegetação?</label>
-                <input type="text" id="veg" name="veg" required>
+                <select id="veg" name="veg" required>
+                    <option value="Sim">Sim</option>
+                    <option value="Não">Não</option>
+                </select>
             </div>
 
             <div class="form-group">
-                <label for="precisao">Precisão azimultal de predição de área em graus</label>
-                <input type="text" id="precisao" name="precisao" required>
+                <label for="precisao">Precisão azimutal de predição de área (graus)</label>
+                <select id="precisao" name="precisao" required>
+                    <option value="0.25">0.25</option>
+                    <option value="0.5">0.5</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                    <option value="6">6</option>
+                    <option value="9">9</option>
+                    <option value="18">18</option>
+                    <option value="36">36</option>
+                    <option value="45">45</option>
+                    <option value="90">90</option>
+                </select>
             </div>
 
             <div class="form-group">
-                <label for="larg">Largura média da rua em área urbana</label>
-                <input type="text" id="larg" name="larg" required>
+                <label for="sit">Confiabilidade (%)</label>
+                <select id="sit" name="sit" required>
+                    <option value="50">50%</option>
+                    <option value="60">60%</option>
+                    <option value="70">70%</option>
+                    <option value="80">80%</option>
+                    <option value="90">90%</option>
+                </select>
             </div>
 
             <div class="form-group">
-                <label for="sit">Confiabilidade (de 50% a 90%)</label>
-                <input type="text" id="sit" name="sit" required>
+                <label for="larg">Largura média da rua (metros)</label>
+                <input type="number" id="larg" name="larg" required min="1" step="0.1">
             </div>
 
-            <button type="submit">Setar configuração</button>
+            <button type="submit">Salvar configuração</button>
         </form>
     </div>
 
     <style>
         body {
             font-family: Arial, sans-serif;
+            background-color: #f9f9f9;
+            margin: 0;
+            padding: 0;
         }
 
         #config {
+            max-width: 600px;
+            margin: 50px auto;
+            background-color: #fff;
             padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
 
         h2 {
             text-align: center;
-            margin-top: 20px;
-            margin-bottom: 20px;
+            margin-bottom: 30px;
         }
 
         .form-group {
-            margin-bottom: 15px;
+            margin-bottom: 20px;
         }
 
         .form-group label {
             display: block;
+            font-weight: bold;
             margin-bottom: 5px;
         }
 
+        .form-group select,
         .form-group input {
             width: 100%;
-            padding: 8px;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
             box-sizing: border-box;
         }
 
         button {
-            display: block;
             width: 100%;
-            padding: 10px;
-            margin-top: 20px;
+            padding: 12px;
+            font-size: 16px;
             background-color: #007BFF;
             color: #fff;
             border: none;
+            border-radius: 4px;
             cursor: pointer;
+            transition: background-color 0.3s ease;
         }
 
         button:hover {

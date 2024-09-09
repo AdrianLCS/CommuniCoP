@@ -11,7 +11,7 @@ def extrarir_do_rio(p1,p2):
     maxx, maxy = max(p1[0], p2[0])+1/360, max(p1[1], p2[1])+1/360
     bbox = box(minx, miny, maxx, maxy)
 
-    nome = "Rio_de_janeiro_2013"
+    nome = "construcoes"
 
     # Abra o shapefile grande
     input_shapefile = 'shapefiles\\'+nome+'.shp'

@@ -58,12 +58,12 @@
 
                 <div class="card">
                     <div class="card-header text-center">
-                        <h2>Excluir Estação</h2>
+                        <h2>Excluir Estação Rádio</h2>
                     </div>
                     <div class="card-body">
                         <form action="{{ url_for('ptp') }}" method="post">
                             <div class="form-group mb-3">
-                                <label for="ponto1">Selecione o ponto</label>
+                                <label for="ponto1">Selecione uma Estação Rádio</label>
                                 <select class="form-control" id="ponto1" name="ponto1" required>
                                     {% for marker in markers %}
                                         <option>{{ marker["nome"] }}</option>
