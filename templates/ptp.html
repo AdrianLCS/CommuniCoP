@@ -38,13 +38,14 @@
             <button type="submit">Calcular perda</button>
         </form>
 
-        <h3>Rádio no Ponto {{ pt1 }}</h3>
+        <h3>Estação Rádio {{ pt1 }}</h3>
         <table>
             <tr>
                 <th>Nome</th>
                 <th>Potência de transmissão (dBm)</th>
                 <th>Ganho da antena (dBi)</th>
                 <th>Sensibilidade (dBm)</th>
+                <th>Altura da antena (m)</th>
             </tr>
             <tr>
                 {% for i in parametros_do_radio[0] %}
@@ -53,13 +54,14 @@
             </tr>
         </table>
 
-        <h3>Rádio no Ponto {{ pt2 }}</h3>
+        <h3>Estação Rádio {{ pt2 }}</h3>
         <table>
             <tr>
                 <th>Nome</th>
                 <th>Potência de transmissão (dBm)</th>
                 <th>Ganho da antena (dBi)</th>
                 <th>Sensibilidade (dBm)</th>
+                <th>Altura da antena (m)</th>
             </tr>
             <tr>
                 {% for i in parametros_do_radio[1] %}

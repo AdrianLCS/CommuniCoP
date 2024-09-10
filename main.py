@@ -1239,8 +1239,8 @@ def ptp():
     ht, hr, potenciat, potenciar, sensibilidadet, sensibilidader, g1, g2 = 0, 0, 0, 0, 0, 0, 0, 0
     p1 = ()
     p2 = ()
-    pt1='ponto 1'
-    pt2='ponto 2'
+    pt1='1'
+    pt2='2'
     perda_raytracing='Não Calculado'
     radt, radr = 'Não definido','Não definido'
     yt = 1  # é a perda pelo clima, adotar esse valor padrao inicialmente
@@ -1369,7 +1369,7 @@ def ptp():
                     perda_raytracing = "Não Calculado"
 
 
-            parametros_do_radio=[[radt, pott1,g1,sensibilidadet],[radr, pott2,g2,sensibilidader]]
+            parametros_do_radio=[[radt, pott1,g1,sensibilidadet,hg1],[radr, pott2,g2,sensibilidader,hg2]]
             local_perdas = {'ponto1': request.form.get("ponto1"),
                             'ponto2': request.form.get("ponto2"),
                             'f': f,
