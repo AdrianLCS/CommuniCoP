@@ -433,7 +433,7 @@ def atenuaco_por_icertezas_sitacao(qs, he1, he2, k, d, yt):
         de = d0 + d - dex
     zs = tabela_z[qs]
     sigmas = 5 + 3 * (np.exp(-de / D))
-    ys = (((sigmas ** 2) + (yt ** 2)) ** 0.5) * zs
+    ys = (((sigmas ** 2) + ((yt ** 2)/(7.8+(zs**2)))) ** 0.5) * zs
 
     return ys
 

@@ -29,7 +29,7 @@ er_concreto = 5.24
 conreto_c = 0.0462
 conreto_d = 0.7822
 
-Configuracao = {"urb": 1, "veg": 1, "precisao": 4, "largura_da_rua": 22.5, "alt_max": 1000, 'sit': 70}
+Configuracao = {"urb": 1, "veg": 1, "precisao": 4, "largura_da_rua": 22.5, "alt_max": 1000, 'sit': 7}
 # Criar opção de adiconar rádio #sensibilidade em e potencia W ganho em dB frequencia em MHz
 radio1 = {'nome': '"RF7800V-HH"', 'sensibilidade': -116, 'faixa_de_freq': [30, 108],
           'potencia': {'tipo': 1, 'valor': [0.25, 1, 2, 5, 10]},
@@ -252,7 +252,7 @@ def modificar_e_salvar_raster(raster_path, ponto, raio, limear, ht, hr, f, preci
     pasta = raster_path[:-11] + 'modificado'
     file = '\A' + raster_path[-11:]
     yt = 1
-    qs = round(float(local_Configuracao['sit']) / 10)
+    qs = int(local_Configuracao['sit'])
 
     with rasterio.open(raster_path, 'r+') as src:
         # Ler a matriz de dados do raster
@@ -333,11 +333,11 @@ def modificar_e_salvar_raster(raster_path, ponto, raio, limear, ht, hr, f, preci
                             espesura = obter_vegeta_atravessada(f, indice_visada_r, dem, landcover, dsm, hr, ht,
                                                                 distancia,
                                                                 indice_visada)
-                            vegetacao = Modelos.atenuaca_vegetacao_antiga_ITU(f, espesura)
+                            vegetacao = Modelos.atenuaca_vegetacao_antiga_ITU(f, espesura, 0.55)
                         else:
                             vegetacao = 0
 
-                        dls, hs = parametros_difracao(distancia, dem, hg1, hg2)
+                        dls, hs = parametros_difracao(distancia, dsm, hg1, hg2)
                         espaco_livre = Modelos.friis_free_space_loss_db(f, d)
                         epstein = Modelos.modelo_epstein_peterson(dls, hs, f)
                         itm, variabilidade_situacao, At, dls_LR = Modelos.longLq_rice_model(hmed, f, hg1, hg2, he1,
@@ -753,22 +753,22 @@ def ajuste(elevacao, distancia, hg1, hg2, dl1, dl2):
     xb = len(elevacao) - 1 - int(min(15 * hg2, 0.1 * dl2) / distancia[1])
     zorig = elevacao[xa:xb + 1]
     xorig = np.array(range(xa, xb + 1))
-    z = []
-    x = []
+    zn = []
+    xn = []
     u = 0
 
     # reduzir qtd de pontos usar quando for subamostrar
     while u <= len(xorig) - 5:
         xaux = np.mean(xorig[u:u + 4])
         zaux = np.mean(zorig[u:u + 4])
-        x.append(xaux)
-        z.append(zaux)
+        xn.append(xaux)
+        zn.append(zaux)
         u = u + 5
     # z = np.array(zorig)
     # x = np.array(xorig)
-    if len(zorig) > 100:
-        z = np.array(z)
-        x = np.array(x)
+    if len(zorig) > 300:
+        z = np.array(zn)
+        x = np.array(xn)
     else:
         z = np.array(zorig)
         x = np.array(xorig)
@@ -808,8 +808,8 @@ def ajuste(elevacao, distancia, hg1, hg2, dl1, dl2):
     return he1, he2, Dh
 
 
-def obter_dados_do_perfil(dem, dsm, distancia, ht, hr, Densidade_urbana):
-    """A patrir de um perfil de terreno obtém os parametros do modelo ITM"""
+"""def obter_dados_do_perfil(dem, dsm, distancia, ht, hr, Densidade_urbana):
+    #"A patrir de um perfil de terreno obtém os parametros do modelo ITM"
     angulo = []
     angulor = []
     demr = dem[::-1]
@@ -854,8 +854,48 @@ def obter_dados_do_perfil(dem, dsm, distancia, ht, hr, Densidade_urbana):
     else:
         h_urb = 0
 
-    return d, hg1, hg2, dl1, dl2, teta1, teta2, he1, he2, Dh, h_urb, visada, indice_visada_r, indice_visada
+    return d, hg1, hg2, dl1, dl2, teta1, teta2, he1, he2, Dh, h_urb, visada, indice_visada_r, indice_visada"""
 
+
+def obter_dados_do_perfil(dem, dsm, distancia, ht, hr, Densidade_urbana):
+    """A patrir de um perfil de terreno obtém os parametros do modelo ITM"""
+    angulo = []
+    angulor = []
+    demr = dem[::-1]
+    d = distancia[-1]
+    hg1, hg2 = ht, hr
+    aref = np.arctan((-ht - dem[0] + hr + demr[0]) / d)
+    visada = 1  # 'visada# '
+    visadar = 1
+    indice_visada_r = 0
+    indice_visada = 0
+    dl1, dl2, teta1, teta2 = d, d, None, None
+    maxangulo = aref
+    maxangulor = -aref
+
+    for i in range(1, len(dem) - 1):
+        angulo.append(np.arctan((dem[i] - (dem[0] + ht)) / distancia[i]))
+        if angulo[-1] > maxangulo:
+            teta1, dl1, idl1 = angulo[i - 1], distancia[i], i
+            visada = 0
+            indice_visada = idl1
+            maxangulo = max(angulo)
+
+    for i in range(1, len(demr) - 1):
+        angulor.append(np.arctan((demr[i] - (demr[0] + hr)) / distancia[i]))
+        if angulor[-1] > maxangulor:
+            teta2, dl2, idl2 = angulor[i - 1], distancia[i], i
+            visadar = 0
+            indice_visada_r = len(demr) - (i + 1)
+            maxangulor = max(angulor)
+    visada = max(visada, visadar)
+
+    he1, he2, Dh = ajuste(dem, distancia, hg1, hg2, dl1, dl2)
+    # h é a altura dos telaho m
+    # hb altura do transmissor, de 4 a 50- equivalente para cost25 sem visada
+    h_urb = abs((1 / Densidade_urbana) * (dsm[-1]+dsm[-2] - dem[-1]-dem[-2])/2)
+
+    return d, hg1, hg2, dl1, dl2, teta1, teta2, he1, he2, Dh, h_urb, visada, indice_visada_r, indice_visada
 
 def obter_vegeta_atravessada(f, indice, dem, landcover, dsm, hr, ht, distancia, indice_d):
     """A partrir dos perfis obtém espessura da vegetação penetrada pelo sinal rádio"""
@@ -1203,7 +1243,8 @@ def ptp():
     pt2='ponto 2'
     perda_raytracing='Não Calculado'
     radt, radr = 'Não definido','Não definido'
-
+    yt = 1  # é a perda pelo clima, adotar esse valor padrao inicialmente
+    qs = int(local_Configuracao['sit'])  # 70% das situacões
     if request.method == "POST":
         pt1=request.form.get("ponto1")
         pt2=request.form.get("ponto2")
@@ -1253,15 +1294,13 @@ def ptp():
                 urban = 'wi'
             else:
                 urban = 'n'
-            yt = 1  # é a perda pelo clima, adotar esse valor padrao inicialmente
-            qs = round(float(local_Configuracao['sit']) / 10)  # 70% das situacões
             espesura = obter_vegeta_atravessada(f, indice_visada_r, dem, landcover, dsm, hr, ht, distancia,
                                                 indice_visada)
 
-            vegetacao = Modelos.atenuaca_vegetacao_antiga_ITU(f, espesura)
+            vegetacao = Modelos.atenuaca_vegetacao_antiga_ITU(f, espesura, 0.55)
 
             hmed = (dem[0] + dem[-1]) / 2
-            dls, hs = parametros_difracao(distancia, dem, hg1, hg2)
+            dls, hs = parametros_difracao(distancia, dsm, hg1, hg2)
             espaco_livre = Modelos.friis_free_space_loss_db(f, d)
             epstein = Modelos.modelo_epstein_peterson(dls, hs, f)
             itm, variabilidade_situacao, At, dls_LR = Modelos.longLq_rice_model(hmed, f, hg1, hg2, he1, he2, d, yt, qs,
@@ -1285,7 +1324,7 @@ def ptp():
                 urb = 0
 
             # colocar aqu uma funcao que adiciona a perda por vegetacao
-            if (Dh > 90):
+            if (((Dh>90) and (d<=0.7*dls_LR)))or (d < 2000):
                 Perda_por_terreno = (epstein)
             else:
                 Perda_por_terreno = (itm + variabilidade_situacao)
@@ -1355,15 +1394,13 @@ def ptp():
                         urban = 'wi'
                     else:
                         urban = 'n'
-                    yt = 1  # é a perda pelo clima, adotar esse valor padrao inicialmente
-                    qs = 5  # 70% das situacões
                     espesura = obter_vegeta_atravessada(f, indice_visada_r, dem[:u + 1], landcover[:3 * u + 1],
                                                         dsm[:u + 1], hg2, hg1, distancia[:u + 1], indice_visada)
                     # colocar a cidicao para chamar itm ou urbano + espaco livre
 
                     h0 = (dem[0] + dem[-1]) / 2
 
-                    dls, hs = parametros_difracao(distancia[:u + 1], dem[:u + 1], hg1, hg2)
+                    dls, hs = parametros_difracao(distancia[:u + 1], dsm[:u + 1], hg1, hg2)
 
                     epstein = Modelos.modelo_epstein_peterson(dls, hs, f)
                     espaco_livre = Modelos.friis_free_space_loss_db(f, d)
@@ -1385,6 +1422,7 @@ def ptp():
                     vegetacao = Modelos.atenuaca_vegetacao_antiga_ITU(f, espesura)
                     vet_perdas[u] = potencia_dbw - (vegetacao + urb + Perda_por_terreno + espaco_livre)
 
+
             fig, ax1 = plt.subplots()
             ax1.plot(distancia, dem, label='Perfil do terreno', color="blue")
             # ax1.plot(distancia, sperficie, label='Perfil do terreno', color="green")
@@ -1394,10 +1432,13 @@ def ptp():
 
             ax2 = ax1.twinx()
 
-            ax2.plot(distancia, vet_perdas, label='Perfil do terreno', color="red")
+            ax2.plot(distancia, vet_perdas, label='Potência recebida', color="red")
             ax2.set_ylabel('Potência recebida em dBm', color='red')
             ax2.tick_params(axis='y', labelcolor='red')
 
+            ax2.axhline(y=sensi_ref, color='green', linestyle='--', label=f'Sensibilidade {sensi_ref} dBm')
+
+            ax2.legend()
             titulo = 'Perfil do terreno ' + fig_name + ', e potência recebida'
             plt.title(titulo)
             fig.tight_layout()
@@ -1496,7 +1537,7 @@ def conf():
                               "precisao": float(request.form.get("precisao")),
                               "largura_da_rua": float(request.form.get("larg")),
                               "alt_max": 1000,
-                              "sit": float(request.form.get("sit"))}
+                              "sit": int(request.form.get("sit"))}
         session['Configuracao'] = local_Configuracao
 
     return render_template('conf.html')
