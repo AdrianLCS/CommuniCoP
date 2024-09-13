@@ -349,7 +349,7 @@ def modificar_e_salvar_raster(raster_path, ponto, raio, limear, ht, hr, f, preci
                                                                                             teta1, teta2,
                                                                                             polarizacao='v')
 
-                        if (Dh > 100) and (d <= 0.7 * dls_LR) or (d < 0.1 * dls_LR):
+                        if (Dh > 100) and (d <= 0.7 * dls_LR) or (d < 2000):
                             p = (espaco_livre + epstein + vegetacao + urb)
                         else:
                             p = (espaco_livre + itm + vegetacao + urb + variabilidade_situacao)
@@ -380,10 +380,20 @@ def criaimg(dem_file, nova_cobertura, cormin, cormax):
     que será visualizada como área de cobertura. O raster usado na entrada da função é gerado pela função
     modificar_e_salvar_raster """
     # Carregar o arquivo DEM (tif)
-    """colors = [(1, 0, 0),(0.75, 0.25, 0),(0.5, 0.5, 0), (0.25, 0.75, 0),
+    """colors = [(.1, 0, 0),(0.75, 0.25, 0),(0.5, 0.5, 0), (0.25, 0.75, 0),
               (0, 1, 0),(0, 0.75, 0.25),(0, 0.25, 0.5), (0, 0.12, 0.75),
               (0, 0, 1),(0.25, 0.25, 1),(0.5, 0.5, 1), (0.75, 0.75, 1), (1, 1, 1)]  # Vermelho -> Verde -> Azul -> Branco"""
-    colors = [(1, 0, 0),(1, 0.25, 0.25),(1, 0.5, 0.5),(1, 0.75, 0.25), (1, 1, 0),(1, 1, 0.25), (1, 1, 0.5),(1, 1, 0.5), (1, 1, 1)]
+    """0.45: '#0080FF',  # Lighter blue
+    0.5: '#00BFFF',  # Cyan
+    0.55: '#00FFBF',  # Greenish-cyan
+    0.57: '#00FF80',  # Light green
+    0.6: '#80FF00',  # Lime green
+    0.7: 'yellow',  # Yellow-green
+    0.8: '#FFBF00',  # Orange
+    0.9: '#FF8000',  # Dark orange
+    1.0: 'red"""
+
+    colors = [(0.9, 0, 0),(0.9, 0.5, 0),(0.9, 0.7, 0),(0.95, 0.95, 0), (0.6, 1, 0),(0, 1, 0.6), (0, 1, 0.8),(0.1, 0.75, 1), (1, 1, 1)]
     cmap = LinearSegmentedColormap.from_list('custom_cmap', colors, N=1000)
     dem_dataset = rasterio.open(dem_file)
 
@@ -399,7 +409,7 @@ def criaimg(dem_file, nova_cobertura, cormin, cormax):
     im = ax.imshow(dem_data, cmap=cmap, extent=[dem_dataset.bounds.left, dem_dataset.bounds.right,
                                                 dem_dataset.bounds.bottom, dem_dataset.bounds.top])"""
     plt.figure(figsize=(dem_data.shape[1] / 100, dem_data.shape[0] / 100), dpi=100)
-    plt.imshow(dem_data, cmap=cmap, vmin=cormin, vmax=cormax)
+    plt.imshow(dem_data, cmap=cmap, vmax=cormax)
     plt.axis('off')
 
     # Salvar a imagem em um arquivo sem títulos, eixos e barra de cores
@@ -984,7 +994,7 @@ def obter_vegeta_atravessada(f, indice, dem, landcover, dsm, hr, ht, distancia, 
         #    espesura = ref + (espesura - ref) / 2
 
         # print(espesura)
-    return 0.4 * espesura  # considerando 40% da area coberta com vegetação elevada. a documentação dos dados estabelec 10% ou mais
+    return 0.5 * espesura  # considerando 40% da area coberta com vegetação elevada. a documentação dos dados estabelec 10% ou mais
 
 
 def addfoliun(local_mapas, local_cobertura):
@@ -1503,7 +1513,7 @@ def area():
                                             float(request.form.get("f")), precisao, largura_da_rua, local_Configuracao)
 
         nova_cobertura = request.form.get("ponto") + '_Area_de_cobertura' + '_' + request.form.get("f")
-        img = criaimg(caminho, nova_cobertura, limear-50,limear)
+        img = criaimg(caminho, nova_cobertura, 0,limear)
         novo = 0
         for i in local_cobertura:
             if i['nome'] == nova_cobertura:

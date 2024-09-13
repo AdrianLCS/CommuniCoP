@@ -10,7 +10,7 @@
                 <select id="ponto" name="ponto" required>
                     <option value="">Selecione uma estação</option>
                     {% for marker in markers %}
-                    <option value="{{ marker["id"] }}">{{ marker["nome"] }}</option>
+                    <option>{{ marker["nome"] }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -20,7 +20,7 @@
                 <select id="ponto2" name="ponto2" required>
                     <option value="">Selecione uma estação</option>
                     {% for marker in markers %}
-                    <option value="{{ marker["id"] }}">{{ marker["nome"] }}</option>
+                    <option>{{ marker["nome"] }}</option>
                     {% endfor %}
                 </select>
             </div>
