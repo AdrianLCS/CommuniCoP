@@ -1372,7 +1372,7 @@ def ptp():
                     ray_paths, quinas, distancia_rays = RayTracing.trace_rays(shapeData, p3, p4, num_azimuths=1000,
                                                                               max_reflections=3, max_diffractions=1)
                     perda_raytracing = RayTracing.calcula_enlace(p3, p4, hg1, hg2, ray_paths, er_concreto, er_solo,
-                                                                 sigma_conreto, sigma_solo)
+                                                                 sigma_conreto, sigma_solo,f,num_azimuths=1000,polarizacao='V')
                     perda_raytracing = round(perda_raytracing*10)/10
 
                 else:

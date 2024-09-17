@@ -305,22 +305,22 @@ def trace_rays(shapeData, tx_position, rx_position, num_azimuths=1000, max_refle
     return ray_paths, quinas, distancia
 
 
-# Example usage
+"""# Example usage
 shapefile_path = 'shapefiles/osm_urca.shp'
 shapeData = load_shapefile(shapefile_path)
 tx1_position = (-43.1750389,-22.9531831)#(-43.1750461, -22.9531651) #(-43.170956, -22.953926, 0)  # tx_position=(-43.1726616,-22.9536628,0)#
 rx1_position =(-43.1743285,-22.9531298) #(-43.1743393, -22.9531336)  #(-43.170104, -22.953798, 0)  # rx_position = (-43.1723437,-22.9537710, 0)#
 num_azimuths = 300
-f = 800
+f = 800"""
 """ray_paths, quinas, distancia = trace_rays(shapeData, tx1_position, rx1_position, num_azimuths=num_azimuths,
                                           max_reflections=0, max_diffractions=1, diffraction_distance=1 / (3600 * 15))
 """
-print('quinas')
+"""print('quinas')
 #print(quinas)
 tx1_position = np.array(tx1_position)
 rx1_position = np.array(rx1_position)
 polarizacao = 'V'
-
+"""
 
 def impedancia(e, u, sig, freq):
     return ((2 * np.pi * freq * 1e6 * u * 1j / (sig + 2 * np.pi * freq * 1e6 * e * 1j)) ** 0.5) / 377
@@ -331,17 +331,10 @@ def beta(e, u, sig, freq):
             ((1 / 2) * (((1 + ((sig / (2 * np.pi * freq * 1e6 * e)) ** 0.5)) ** 0.5) + 1)) ** 0.5)
 
 
-sigmasol = 0.005  # S/m
-ersol = 15
-h1 = 1.5
-h2 = 1.5
-er = 5.24
-sc = 0.0462
-sd = 0.7822
-sigma = sc * (f * 1e6) ** sd
 
 
-def calcula_enlace(tx_position, rx_position, hg1, hg2, ray_paths, er, ersolo, sigma, sigmasolo):
+
+def calcula_enlace(tx_position, rx_position, hg1, hg2, ray_paths, er, ersolo, sigma, sigmasolo, f, num_azimuths,polarizacao='V'):
     impe = impedancia(e0 * er, mi0, sigma, f)
     bet0 = beta(e0, mi0, 0, f)
     bet = beta(e0 * ersolo, mi0, sigmasolo, f)
