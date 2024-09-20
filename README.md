@@ -27,7 +27,9 @@ Cálculo da atenuação de rádio.
 
 5. No ambiente com Python instalado, instale a biblioteca Folium: `python -m pip install folium`
 
-6. Baixe toda a pasta do projeto e rode o arquivo `main.py`. Abra o navegador e acesse a máquina em que o software está rodando pelo seu endereço IP na porta 5000.
+6. No ambiente com Python instalado, instale a biblioteca fiona: `python -m pip install fiona`
+
+7. Baixe toda a pasta do projeto e rode o arquivo `main.py`. Abra o navegador e acesse a máquina em que o software está rodando pelo seu endereço IP na porta 5000.
 
 # Tutorial de Uso:
 
