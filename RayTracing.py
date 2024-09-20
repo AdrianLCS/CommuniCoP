@@ -137,7 +137,7 @@ def trace_rays(shapeData, tx_position, rx_position, num_azimuths=1000, max_refle
     shape_ja_testados = []
     tx_position = np.array(tx_position[:2])  # Only use XY components
     distancia = np.linalg.norm(rx_position[:2] - tx_position)
-    max_distance = distancia * 2 * np.pi / num_azimuths
+    max_distance = distancia * np.pi / num_azimuths #distancia * 2 * np.pi / num_azimuths
     dir_tx_rx = (rx_position[:2] - tx_position) / distancia
     directions.append(dir_tx_rx)
 
@@ -346,7 +346,8 @@ def calcula_enlace(tx_position, rx_position, hg1, hg2, ray_paths, er, ersolo, si
     d_ref = getDistanceBetweenPointsNew(tx_position[1], tx_position[0], rx_position[1], rx_position[0])
     print(ray_paths)
     cont = 0
-    for path in ray_paths:
+    for gg in range(len(ray_paths)):
+        path = ray_paths[gg]
         tamanho = len(path)
         d = 0
         perda = 1
