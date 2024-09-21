@@ -408,7 +408,7 @@ def criaimg(dem_file, nova_cobertura, cormin, cormax):
     cmap = plt.get_cmap('terrain')
     im = ax.imshow(dem_data, cmap=cmap, extent=[dem_dataset.bounds.left, dem_dataset.bounds.right,
                                                 dem_dataset.bounds.bottom, dem_dataset.bounds.top])"""
-    plt.figure(figsize=(dem_data.shape[1] / 100, dem_data.shape[0] / 100), dpi=100)
+    """plt.figure(figsize=(dem_data.shape[1] / 100, dem_data.shape[0] / 100), dpi=100)
     plt.imshow(dem_data, cmap=cmap, vmax=cormax)
     plt.axis('off')
 
@@ -416,7 +416,31 @@ def criaimg(dem_file, nova_cobertura, cormin, cormax):
     plt.savefig('Raster/modificado/' + nova_cobertura + ".png", format="png", bbox_inches='tight', pad_inches=0)
 
     # Fechar a figura para liberar recursos
+    plt.close()"""
+
+    # Criando a figura
+    fig, ax = plt.subplots(figsize=(dem_data.shape[1] / 100, dem_data.shape[0] / 100), dpi=100)
+
+    # Mostrando a imagem com o colormap e definindo o valor máximo (vmax)
+    img = ax.imshow(dem_data, cmap=cmap, vmax=cormax)
+
+    # Removendo os eixos da imagem
+    ax.axis('off')
+
+    # Criando um eixo inset para a barra de cores dentro da imagem
+    cax = ax.inset_axes([0.02, 0.95, 0.3, 0.01])  # Posição [x, y, largura, altura] dentro do eixo original
+
+    # Adicionando a barra de cores ao eixo inset
+    plt.colorbar(img, cax=cax, orientation='horizontal')
+
+    # Salvar a imagem em um arquivo sem títulos, eixos e barra de cores
+    plt.savefig('Raster/modificado/' + nova_cobertura + ".png", format="png", bbox_inches='tight', pad_inches=0)
+
+    # Fechar a figura para liberar recursos
     plt.close()
+
+
+
     return 'Raster/modificado/' + nova_cobertura + ".png"
 
 
@@ -1037,7 +1061,7 @@ def addfoliun(local_mapas, local_cobertura):
     dadosprop=[]
     dadositms=[]
     erro=[]
-    with open('C:\PythonFlask\PlanCom\\mtteste12.txt') as csvfile:
+    with open('C:\PythonFlask\PlanCom\\mtteste9.txt') as csvfile:
         spamreader = np.genfromtxt(csvfile, delimiter=',')
         cont = 0
 
@@ -1365,7 +1389,7 @@ def ptp():
                     p4 = tuple(p2)
                     print(p3)
                     print(p4)
-                    shapefile_path = 'shapefiles/osm_urca.shp'
+                    shapefile_path = 'shapefiles\derivados\construcoes.shp'
                     shapefile_path = shp_extrair.extrarir_do_rio(p3, p4)
                     shapeData = RayTracing.load_shapefile(shapefile_path)
                     sigma_conreto = conreto_c * (f * 1e6) ** conreto_d

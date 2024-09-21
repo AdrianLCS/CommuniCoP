@@ -128,7 +128,7 @@ def reflec_raio(segment, ray_position, itersec_point):
     return None
 
 
-def trace_rays(shapeData, tx_position, rx_position, num_azimuths=1000, max_reflections=5, max_diffractions=1,
+def trace_rays(shapeData, tx_position, rx_position, num_azimuths=1000, max_reflections=3, max_diffractions=1,
                diffraction_distance=0.5):
     """Trace rays from tx_position to rx_position in 2D."""
     quinas = []
@@ -137,7 +137,7 @@ def trace_rays(shapeData, tx_position, rx_position, num_azimuths=1000, max_refle
     shape_ja_testados = []
     tx_position = np.array(tx_position[:2])  # Only use XY components
     distancia = np.linalg.norm(rx_position[:2] - tx_position)
-    max_distance = distancia * np.pi / num_azimuths #distancia * 2 * np.pi / num_azimuths
+    max_distance = distancia * 2 * np.pi / num_azimuths #distancia * 2 * np.pi / num_azimuths
     dir_tx_rx = (rx_position[:2] - tx_position) / distancia
     directions.append(dir_tx_rx)
 
@@ -244,33 +244,37 @@ def trace_rays(shapeData, tx_position, rx_position, num_azimuths=1000, max_refle
 
                             if vazio0:
                                 quina_rx_dir = np.array(rx_position[:2]) - np.array(tuple(p_intesec))
+                                tx_rx_dir = np.array(rx_position[:2]) - np.array(tx_position[:2])
+                                tx_rx_dir=tx_rx_dir/np.linalg.norm(tx_rx_dir)
                                 quina_rx_dir = quina_rx_dir / np.linalg.norm(quina_rx_dir)
-                                p_intesec2 = np.array(tuple(p_intesec)) + 0.000001 * quina_rx_dir
-                                rx_quina = LineString([rx_position[:2], p_intesec - 0.000001 * quina_rx_dir])
-                                quina_rx = LineString([p_intesec2, rx_position[:2]])
-                                intersected_segments_dif = []
+                                cosseno = np.dot(tx_rx_dir, quina_rx_dir)
+                                if cosseno>0:
+                                    p_intesec2 = np.array(tuple(p_intesec)) + 0.000001 * quina_rx_dir
+                                    rx_quina = LineString([rx_position[:2], p_intesec - 0.000001 * quina_rx_dir])
+                                    quina_rx = LineString([p_intesec2, rx_position[:2]])
+                                    intersected_segments_dif = []
 
-                                # intersecao_dif = GeometryCollection()
-                                intersect2 = rx_quina.intersection(closest_shape)
-                                vazio = False
-                                if intersect2.geom_type == 'Point' or intersect2.is_empty:
-                                    vazio = True
-                                    for shapedif in shapeData.geometry:
-                                        intersecao_dif = quina_rx.intersection(shapedif)
-                                        if not intersecao_dif.is_empty:
-                                            vazio = False
+                                    # intersecao_dif = GeometryCollection()
+                                    intersect2 = rx_quina.intersection(closest_shape)
+                                    vazio = False
+                                    if intersect2.geom_type == 'Point' or intersect2.is_empty:
+                                        vazio = True
+                                        for shapedif in shapeData.geometry:
+                                            intersecao_dif = quina_rx.intersection(shapedif)
+                                            if not intersecao_dif.is_empty:
+                                                vazio = False
 
-                                if vazio:
-                                    path_difrac.append(
-                                        (p_intesec2[0], p_intesec2[1], 0, 0, 'difrac'))
-                                    pnum = 1
-                                    for p in ray_paths:
-                                        if path_difrac == p:
-                                            pnum = 0
-                                    if pnum:
-                                        ray_paths.append(path_difrac)
-                                else:
-                                    quinas.append(p_intesec2)
+                                    if vazio:
+                                        path_difrac.append(
+                                            (p_intesec2[0], p_intesec2[1], 0, 0, 'difrac'))
+                                        pnum = 1
+                                        for p in ray_paths:
+                                            if path_difrac == p:
+                                                pnum = 0
+                                        if pnum:
+                                            ray_paths.append(path_difrac)
+                                    else:
+                                        quinas.append(p_intesec2)
 
                 if intersection_point.distance(Point(ray_position)) >= Point(rx_position[:2]).distance(
                         Point(ray_position)):
@@ -339,11 +343,12 @@ def calcula_enlace(tx_position, rx_position, hg1, hg2, ray_paths, er, ersolo, si
     bet0 = beta(e0, mi0, 0, f)
     bet = beta(e0 * ersolo, mi0, sigmasolo, f)
     betsolo = beta(e0 * ersolo, mi0, sigmasolo, f)
-    f0 = 47.7  # em MHz.m
+    f0 = 47.7134515924  # em MHz.m
     k = f / f0
 
     parametros = []
     d_ref = getDistanceBetweenPointsNew(tx_position[1], tx_position[0], rx_position[1], rx_position[0])
+    print('ray_paths')
     print(ray_paths)
     cont = 0
     for gg in range(len(ray_paths)):
@@ -355,13 +360,12 @@ def calcula_enlace(tx_position, rx_position, hg1, hg2, ray_paths, er, ersolo, si
         if tamanho > 1:
             for i in range(1, tamanho):
                 dist_ponto = np.linalg.norm(np.array(path[0][0:2]) - np.array(path[i][0:1]))
-                if path[i][4] == 'reflec' and np.linalg.norm(
-                        np.array(path[i - 1][0:2]) - np.array(path[i][0:2])) > dist_ponto * 2 * np.pi / num_azimuths:
+                if path[i][4] == 'reflec': # and np.linalg.norm( np.array(path[i - 1][0:2]) - np.array(path[i][0:2])) > dist_ponto * 2 * np.pi / num_azimuths:
                     print('caiu em reflec')
-                    ponto_anterior = path[i - 1][0:1]
+                    ponto_anterior = path[i - 1][0:2]
                     intersection_point, incidence_angle, ref_dif = path[i][0:2], path[i][3], path[i][4]
-                    d = d + getDistanceBetweenPointsNew(ponto_anterior[1], ponto_anterior[0], ponto_anterior[1],
-                                                        ponto_anterior[0])
+                    d = d + getDistanceBetweenPointsNew(ponto_anterior[1], ponto_anterior[0], intersection_point[1],
+                                                        intersection_point[0])
 
                     senfi = (hg1 + hg2) / ((d ** 2 + (hg1 + hg2) ** 2) ** 0.5)
                     x = (er - 1j * sigma / (2 * np.pi * f * 1e6 * e0))
@@ -418,7 +422,10 @@ def calcula_enlace(tx_position, rx_position, hg1, hg2, ray_paths, er, ersolo, si
                     fase = cmath.phase(re)
                     print(fase)
 
-            fase = fase - (d - d_ref) * k  # verificar parson 2.19
+
+            d=((hg1 - hg2) ** 2 + d ** 2) ** 0.5
+            d_ref2 = ((hg1 - hg2) ** 2 + d_ref ** 2) ** 0.5
+            fase = fase - (d - d_ref2) * k  # verificar parson 2.19
             parametros.append([perda, fase, d])
 
 
@@ -430,8 +437,11 @@ def calcula_enlace(tx_position, rx_position, hg1, hg2, ray_paths, er, ersolo, si
             parametros.append([perda, fase, d])
 
     if cont == 1:
-        d = d_ref
-        Dphi = 4 * np.pi * hg1 * hg2 * (f / 299.792458) / d
+        d = ((hg1+hg2)**2+d_ref**2)**0.5
+        d_ref2=((hg1 - hg2) ** 2 + d_ref ** 2) ** 0.5
+        Dphi = (d - d_ref2) *  k #k 2 * np.pi * (f / 299.792458)#4 * np.pi * hg1 * hg2 * (f / 299.792458) / d
+        print(k)
+        print(2 * np.pi * (f / 299.792458))
         senfi = (hg1 + hg2) / ((d ** 2 + (hg1 + hg2) ** 2) ** 0.5)
         x = (ersolo - 1j * sigmasolo / (2 * np.pi * f * 1e6 * e0))
         cos2fi = (1 - senfi ** 2)
@@ -443,9 +453,12 @@ def calcula_enlace(tx_position, rx_position, hg1, hg2, ray_paths, er, ersolo, si
         perda = abs(re)
         fase = cmath.phase(re) - Dphi
         parametros.append([perda, fase, d])
+        print('parametros')
+        print(parametros)
 
     ptot = 0
-    for caso in parametros:
+    for i in range(len(parametros)):
+        caso=parametros[i]
         # verificar se é o caso clacular a atenuação no espaço livre antes de somar cada caso com ptot
         ptot = ptot + caso[0] * (d_ref/caso[2]) * np.exp(1j * caso[1])
     if ptot != 0:
