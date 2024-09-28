@@ -128,7 +128,7 @@ def reflec_raio(segment, ray_position, itersec_point):
     return None
 
 
-def trace_rays(shapeData, tx_position, rx_position, num_azimuths=1000, max_reflections=3, max_diffractions=1,
+def trace_rays(shapeData, tx_position, rx_position, num_azimuths=2000, max_reflections=3, max_diffractions=1,
                diffraction_distance=0.5):
     """Trace rays from tx_position to rx_position in 2D."""
     quinas = []
@@ -248,7 +248,7 @@ def trace_rays(shapeData, tx_position, rx_position, num_azimuths=1000, max_refle
                                 tx_rx_dir=tx_rx_dir/np.linalg.norm(tx_rx_dir)
                                 quina_rx_dir = quina_rx_dir / np.linalg.norm(quina_rx_dir)
                                 cosseno = np.dot(tx_rx_dir, quina_rx_dir)
-                                if cosseno>0:
+                                if cosseno>0.1:
                                     p_intesec2 = np.array(tuple(p_intesec)) + 0.000001 * quina_rx_dir
                                     rx_quina = LineString([rx_position[:2], p_intesec - 0.000001 * quina_rx_dir])
                                     quina_rx = LineString([p_intesec2, rx_position[:2]])

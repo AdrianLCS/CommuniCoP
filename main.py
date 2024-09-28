@@ -408,7 +408,8 @@ def criaimg(dem_file, nova_cobertura, cormin, cormax):
     cmap = plt.get_cmap('terrain')
     im = ax.imshow(dem_data, cmap=cmap, extent=[dem_dataset.bounds.left, dem_dataset.bounds.right,
                                                 dem_dataset.bounds.bottom, dem_dataset.bounds.top])"""
-    """plt.figure(figsize=(dem_data.shape[1] / 100, dem_data.shape[0] / 100), dpi=100)
+
+    plt.figure(figsize=(dem_data.shape[1] / 100, dem_data.shape[0] / 100), dpi=100)
     plt.imshow(dem_data, cmap=cmap, vmax=cormax)
     plt.axis('off')
 
@@ -416,9 +417,9 @@ def criaimg(dem_file, nova_cobertura, cormin, cormax):
     plt.savefig('Raster/modificado/' + nova_cobertura + ".png", format="png", bbox_inches='tight', pad_inches=0)
 
     # Fechar a figura para liberar recursos
-    plt.close()"""
+    plt.close()
 
-    # Criando a figura
+    """# Criando a figura
     fig, ax = plt.subplots(figsize=(dem_data.shape[1] / 100, dem_data.shape[0] / 100), dpi=100)
 
     # Mostrando a imagem com o colormap e definindo o valor máximo (vmax)
@@ -437,7 +438,7 @@ def criaimg(dem_file, nova_cobertura, cormin, cormax):
     plt.savefig('Raster/modificado/' + nova_cobertura + ".png", format="png", bbox_inches='tight', pad_inches=0)
 
     # Fechar a figura para liberar recursos
-    plt.close()
+    plt.close()"""
 
 
 
@@ -1390,10 +1391,10 @@ def ptp():
                     print(p3)
                     print(p4)
                     shapefile_path = 'shapefiles\derivados\construcoes.shp'
-                    shapefile_path = shp_extrair.extrarir_do_rio(p3, p4)
+                    #shapefile_path = shp_extrair.extrarir_do_rio(p3, p4)
                     shapeData = RayTracing.load_shapefile(shapefile_path)
                     sigma_conreto = conreto_c * (f * 1e6) ** conreto_d
-                    ray_paths, quinas, distancia_rays = RayTracing.trace_rays(shapeData, p3, p4, num_azimuths=1000,
+                    ray_paths, quinas, distancia_rays = RayTracing.trace_rays(shapeData, p3, p4, num_azimuths=2000,
                                                                               max_reflections=3, max_diffractions=1)
                     perda_raytracing = RayTracing.calcula_enlace(p3, p4, hg1, hg2, ray_paths, er_concreto, er_solo,
                                                                  sigma_conreto, sigma_solo,f,num_azimuths=1000,polarizacao='V')
