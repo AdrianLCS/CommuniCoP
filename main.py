@@ -1293,7 +1293,7 @@ def ptp():
                     potenciat = float(i['pot'])
                     ant = i['ant']
                     num = 0
-                    radt = i['nome']
+                    radt = i['radio']
                     for y in range(len(local_radios)):
                         if local_radios[y]['nome'] == i['radio']:
                             num = y
@@ -1309,7 +1309,7 @@ def ptp():
                     potenciar = float(i['pot'])
                     ant = i['ant']
                     num = 0
-                    radr = i['nome']
+                    radr = i['radio']
                     for y in range(len(local_radios)):
                         if local_radios[y]['nome'] == i['radio']:
                             num = y
