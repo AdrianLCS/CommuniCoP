@@ -5,8 +5,6 @@ import os
 import folium
 import pickle
 from matplotlib.colors import LinearSegmentedColormap
-from folium.plugins import HeatMap
-import branca.colormap
 import matplotlib.pyplot as plt
 import Modelos
 from PIL import Image
@@ -30,7 +28,6 @@ conreto_c = 0.0462
 conreto_d = 0.7822
 
 Configuracao = {"urb": 1, "veg": 1, "precisao": 4, "largura_da_rua": 22.5, "alt_max": 1000, 'sit': 7}
-# Criar opção de adiconar rádio #sensibilidade em e potencia W ganho em dB frequencia em MHz
 radio1 = {'nome': '"RF7800V-HH"', 'sensibilidade': -116, 'faixa_de_freq': [30, 108],
           'potencia': {'tipo': 1, 'valor': [0.25, 1, 2, 5, 10]},
           'antenas': [{'nome': 'wip', 'tiopo': 0, 'ganho': 0}, {'nome': 'bade', 'tiopo': 0, 'ganho': 1}]}
@@ -58,8 +55,16 @@ radios = [radio1, radio2, radio3, radio4, radio5, radio6]
 
 
 def generate_raster_files(base_string):
-    """Obtém uma lista de arquivos Raster com os Rasters em torno de um nome de Raster de entrada. Usada na função
-    unir_raster_3x3 """
+    """
+    Essa função é usada para quando a predição  abrange uma região de mais de um modelo digital de um modelo digital de
+    terreno diferrente
+
+    Obtém uma lista de arquivos Raster com os Rasters em torno de um nome de Raster de entrada. Usada na função
+    unir_raster_3x3
+
+    ainda são necessários alguns testes
+
+    """
     import re
 
     # Extrair a coordenada base da string
@@ -99,9 +104,13 @@ def generate_raster_files(base_string):
 
 
 def unir_raster_3x3(raster_path):
-    """Uir 9 Rasters, usada para formar um raster maior para gerar a área de cobertura quando essa abrange mais de um
+    """
+    Essa função é usada para quando a predição  abrange uma região de mais de um modelo digital de um modelo digital de
+    terreno diferrente
+
+    Uir 9 Rasters, usada para formar um raster maior para gerar a área de cobertura quando essa abrange mais de um
     Raster """
-    raster_files = raster_files = generate_raster_files(raster_path)
+    raster_files = generate_raster_files(raster_path)
 
     # Nome do arquivo de saída
     output_raster = raster_path[:-4] + "_3x3.tif"
@@ -170,15 +179,15 @@ def allowed_file(filename):
 
 
 def extrair_vet_area(raio, ponto, f, limear, unidade_distancia, precisao, local_Configuracao):
-    """Gera os perfis em intervalos azimutais dado pela Váriavel Configuracao, para o cáculo de área de cobertura"""
+    """Essa funão é usada na predição de área. Ela gera os arrays que são perfis de terreno superfície e landcover
+     em intervalos azimutais dado pela Váriavel Configuracao"""
+
     comprimento_de_onda = c / (f * 1000000)
-    # L_db = -20 * np.log10(comprimento_de_onda) + 20 * np.log10(d) + 22
     d = 10 ** ((limear / 20) + np.log10(comprimento_de_onda) - 1.1)
     d = min(raio, d)
     qtd_pontos = int(np.ceil(d / unidade_distancia))
     qtd_retas = int(360 * precisao)
     retas = []
-    # dem0, dsm0, landcover0, distancia0 = [], [], [], []
     dem0, dsm0, landcover0, distancia0 = np.zeros((qtd_retas, qtd_pontos)), np.zeros((qtd_retas, qtd_pontos)), np.zeros(
         (qtd_retas, 3 * (qtd_pontos - 1) + 1)), np.zeros((qtd_retas, qtd_pontos))
 
@@ -188,27 +197,29 @@ def extrair_vet_area(raio, ponto, f, limear, unidade_distancia, precisao, local_
         pf = np.array(ponto) + vet * (
                 d / unidade_distancia) * (1 / 3600)
         dem, dsm, landcover, distancia, r = perfil(ponto, pf, local_Configuracao, 1)
-        # distancia0.append(distancia)
         distancia0[i] = distancia
         retas.append(r)
-        # dem0.append(dem)
         dem0[i] = dem
-        # dsm0.append(dsm)
         dsm0[i] = dsm
-        # landcover0.append(landcover)
         landcover0[i] = landcover
         print(i)
     return retas, d, dem0, dsm0, landcover0, distancia0
 
 
 def parametros_difracao(distancia, dem, ht, hr):
+    """Essa função extrai as alturas e distâncias dos obstáculos principais.
+    A saida dessa função é usada para calculo de difração em multiplos obstáculos
+    """
     angulo = []
     d = distancia[-1]
     aref = (hr + dem[-1] - ht - dem[0]) / d
     visada = 1  # 'visada# '
     maxangulo = aref
-    dls = [0]
+    dls = [0] #crial lista de distâncias com a distância inicial sendo a do transmissor
+
+    # adiciona a altura do transmissor na lista de alturas
     hs = [ht + dem[0]]
+
     h, idl1, teta1 = 0, 0, 0
     for i in range(1, len(dem) - 1):
         angulo.append((dem[i] - (dem[0] + ht)) / distancia[i])
@@ -218,9 +229,14 @@ def parametros_difracao(distancia, dem, ht, hr):
             visada = 0
             maxangulo = max(angulo)
     if not visada:
+
+        # Adiciona a altura do obstáculo na lista de alturas
         hs.append(h)
+
+        # Adiciona a distância do obstáculo na lista de obstáculo
         dls.append(distancia[idl1])
 
+    #procura obstáculos mais significativos
     while not visada:
         idll = [idl1]
         angulo = []
@@ -247,11 +263,16 @@ def parametros_difracao(distancia, dem, ht, hr):
 def modificar_e_salvar_raster(raster_path, ponto, raio, limear, ht, hr, f, precisao, largura_da_rua,
                               local_Configuracao):
     """Essa é a principal função para gerar uma área de cobertura ela modifica um raster de DEM substituindo os
-    valores por dois valores padronizados um para quando o enlace é possível e outro para quano o enlace não é possível.
+    valores de altura por valores de potência de recepção.
     Uma imagem será gerada a partir desse raster com a função criaimg"""
+    #local para salvar o raster motificado
     pasta = raster_path[:-11] + 'modificado'
+
+    #nome do raster modificado
     file = '\A' + raster_path[-11:]
     yt = 1
+
+    #confiabilidade do modelo ITM
     qs = int(local_Configuracao['sit'])
 
     with rasterio.open(raster_path, 'r+') as src:
@@ -261,7 +282,11 @@ def modificar_e_salvar_raster(raster_path, ponto, raio, limear, ht, hr, f, preci
         transform = src.transform
         x, y = inv_transform * (ponto[0], ponto[1])
 
+    #obtém a distância referente a 1 segundo ou 1 pixel do raster
     unidade_distancia = 2 * np.pi * R(ponto[1]) / (360 * (1 / transform[0]))
+
+    # essa funão recebe o ponto transmissor a distancia maxima(raio) que se deseja fazer a predição e outros
+    # paramentros. Retorna as listas com vetores de perfila para cada azuimute
     retas, raio, dem0, dsm0, landcover0, distancia0 = extrair_vet_area(raio, ponto, f, limear, unidade_distancia,
                                                                        precisao, local_Configuracao)
     xy = min(x, 3600 - x, y, 3600 - y)
@@ -269,6 +294,7 @@ def modificar_e_salvar_raster(raster_path, ponto, raio, limear, ht, hr, f, preci
         raster_unido = unir_raster_3x3(raster_path)
         raster_path = raster_unido
 
+    # Abrir o arquivo raster para leitura e escrita
     with rasterio.open(raster_path, 'r+') as src:
         # Ler a matriz de dados do raster
         data = src.read(1)
@@ -276,13 +302,14 @@ def modificar_e_salvar_raster(raster_path, ponto, raio, limear, ht, hr, f, preci
         transform = src.transform
         x, y = inv_transform * (ponto[0], ponto[1])
 
-        # Abrir o arquivo raster para leitura e escrita
+
 
         # Modificar o valor do ponto desejado
         print('retas obtidas')
         print('percorrendo raster')
         for linha in range(np.shape(data)[0]):
             for coluna in range(np.shape(data)[1]):
+                # muita atenão ao anlalizar como a o perfil é obtido em funão do azimute e do ponto que se está no raster
                 distyx = ((((linha - y) ** 2) + ((coluna - x) ** 2)) ** 0.5)
                 if (distyx * unidade_distancia > 200) and (distyx < ((raio / unidade_distancia) - 3)):
 
@@ -361,9 +388,6 @@ def modificar_e_salvar_raster(raster_path, ponto, raio, limear, ht, hr, f, preci
                 else:
                     data[linha][coluna] = limear
 
-        # Atualizar os metadados do raster
-        # src.write(data, 1)
-
         # Obter os metadados do raster original
         meta = src.meta.copy()
 
@@ -379,20 +403,6 @@ def criaimg(dem_file, nova_cobertura, cormin, cormax):
     """Essa função é usada para criar uma imagem a partir de um Raster de canal único, é usada para formar a imagem
     que será visualizada como área de cobertura. O raster usado na entrada da função é gerado pela função
     modificar_e_salvar_raster """
-    # Carregar o arquivo DEM (tif)
-    """colors = [(.1, 0, 0),(0.75, 0.25, 0),(0.5, 0.5, 0), (0.25, 0.75, 0),
-              (0, 1, 0),(0, 0.75, 0.25),(0, 0.25, 0.5), (0, 0.12, 0.75),
-              (0, 0, 1),(0.25, 0.25, 1),(0.5, 0.5, 1), (0.75, 0.75, 1), (1, 1, 1)]  # Vermelho -> Verde -> Azul -> Branco"""
-    """0.45: '#0080FF',  # Lighter blue
-    0.5: '#00BFFF',  # Cyan
-    0.55: '#00FFBF',  # Greenish-cyan
-    0.57: '#00FF80',  # Light green
-    0.6: '#80FF00',  # Lime green
-    0.7: 'yellow',  # Yellow-green
-    0.8: '#FFBF00',  # Orange
-    0.9: '#FF8000',  # Dark orange
-    1.0: 'red"""
-
     colors = [(0.9, 0, 0),(0.9, 0.5, 0),(0.9, 0.7, 0),(0.95, 0.95, 0), (0.6, 1, 0),(0, 1, 0.6), (0, 1, 0.8),(0.1, 0.75, 1), (1, 1, 1)]
     cmap = LinearSegmentedColormap.from_list('custom_cmap', colors, N=1000)
     dem_dataset = rasterio.open(dem_file)
@@ -401,14 +411,6 @@ def criaimg(dem_file, nova_cobertura, cormin, cormax):
     dem_data = dem_dataset.read(1, masked=True)  # Assumindo que os dados estão no primeiro canal
 
     # Configurar a figura e os eixos para o gráfico sem eixos e títulos
-    """fig, ax = plt.subplots(figsize=(100, 100))
-    ax.axis('off')
-
-    # Criar um mapa de cores para representar as altitudes do terreno
-    cmap = plt.get_cmap('terrain')
-    im = ax.imshow(dem_data, cmap=cmap, extent=[dem_dataset.bounds.left, dem_dataset.bounds.right,
-                                                dem_dataset.bounds.bottom, dem_dataset.bounds.top])"""
-
     plt.figure(figsize=(dem_data.shape[1] / 100, dem_data.shape[0] / 100), dpi=100)
     plt.imshow(dem_data, cmap=cmap, vmax=cormax)
     plt.axis('off')
@@ -418,30 +420,6 @@ def criaimg(dem_file, nova_cobertura, cormin, cormax):
 
     # Fechar a figura para liberar recursos
     plt.close()
-
-    """# Criando a figura
-    fig, ax = plt.subplots(figsize=(dem_data.shape[1] / 100, dem_data.shape[0] / 100), dpi=100)
-
-    # Mostrando a imagem com o colormap e definindo o valor máximo (vmax)
-    img = ax.imshow(dem_data, cmap=cmap, vmax=cormax)
-
-    # Removendo os eixos da imagem
-    ax.axis('off')
-
-    # Criando um eixo inset para a barra de cores dentro da imagem
-    cax = ax.inset_axes([0.02, 0.95, 0.3, 0.01])  # Posição [x, y, largura, altura] dentro do eixo original
-
-    # Adicionando a barra de cores ao eixo inset
-    plt.colorbar(img, cax=cax, orientation='horizontal')
-
-    # Salvar a imagem em um arquivo sem títulos, eixos e barra de cores
-    plt.savefig('Raster/modificado/' + nova_cobertura + ".png", format="png", bbox_inches='tight', pad_inches=0)
-
-    # Fechar a figura para liberar recursos
-    plt.close()"""
-
-
-
     return 'Raster/modificado/' + nova_cobertura + ".png"
 
 
@@ -528,34 +506,30 @@ def obter_dados_do_raster(indice_atual, r, dem, dsm, landcover, d, distancia, ar
     de um mesmo arquivo Raster. """
     caminho, caminho_dsm, caminho_landcover = obter_raster(r[indice_atual], r[indice_atual])
     if (local_Configuracao["urb"] or local_Configuracao["veg"]) or not area:
+
+        #extrai do Modelo digital do terreno o valor de altura do proximo ponto da reta e adiciona ao vetor perfil do terreno
         with rasterio.open(caminho) as src:
             raster = src.read(1)
             inv_transform = ~src.transform
-            # transform = src.transform
-            # londem0, latdem0 = transform * (0, 0)
-            indice_atual_dem = indice_atual
+            indice_atual_dem = indice_atual  # indica quem é o procimo ponto da reta
             for i in range(indice_atual, np.shape(r)[0]):
                 if (np.floor(r[i][0]) == np.floor(r[indice_atual_dem][0])) and (
                         np.floor(r[i][1]) == np.floor(r[indice_atual_dem][1])):
-                    # testar achar a coordenada c0 do o x=0 e y=o e a partir dai achar pixel x1 e pixel yi pela diferença entre entre c0 e r[i]
-                    # pixel_x1, pixel_y1 = int(r[i][1]-latdem0),int(r[i][0]-londem0)
                     pixel_x1, pixel_y1 = inv_transform * (r[i][0], r[i][1])
                     dist = distancia * i
 
-                    # alt_dem = raster[int(pixel_y1)][int(pixel_x1)]
-                    if int(pixel_x1) == 3600 or int(pixel_y1) == 3600:
+                    if int(pixel_x1) == 3600 or int(pixel_y1) == 3600:  # confere se não é final do raster(evita erros)
                         pixel_x1 = 3599
                         pixel_y1 = 3599
-                    alt_dem = raster[int(pixel_y1)][int(pixel_x1)]
-
-                    # d.append(dist)
-                    d[i] = dist
-                    # dem.append(alt_dem)
+                    alt_dem = raster[int(pixel_y1)][int(pixel_x1)]  # adiciona o ponto
+                    d[i] = dist # adiciona a distância no vetor disância
                     dem[i] = alt_dem
                     indice_atual_dem = i
                 else:
                     indice_atual_dem = i
                     break
+
+        # extrai do Modelo digital de superfície o valor de altura do proximo ponto da reta e adiciona ao vetor perfil do terreno
         with rasterio.open(caminho_dsm) as src_dsm:
             raster_dsm = src_dsm.read(1)
             inv_transform_dsm = ~src_dsm.transform
@@ -566,18 +540,16 @@ def obter_dados_do_raster(indice_atual, r, dem, dsm, landcover, d, distancia, ar
                         np.floor(r[i][1]) == np.floor(r[indice_atual_dsm][1])):
                     pixel_x1_dsm, pixel_y1_dsm = inv_transform_dsm * (r[i][0], r[i][1])
 
-                    # alt_dsm = raster_dsm[int(pixel_y1_dsm)][int(pixel_x1_dsm)]
                     if int(pixel_x1) == 3600 or int(pixel_y1) == 3600:
                         pixel_x1 = 3599
                         pixel_y1 = 3599
                     alt_dsm = raster_dsm[int(pixel_y1_dsm)][int(pixel_x1_dsm)]
-
-                    # dsm.append(alt_dsm)
                     dsm[i] = alt_dsm
                     indice_atual_dsm = i
                 else:
                     break
-
+        # extrai do Modelo digital de superfície o valor de altura do proximo ponto da reta e adiciona ao vetor perfil do terreno
+        #é mais complicado pois a precisão desse arquivo é 3x a do DSM e do DTM
         with rasterio.open(caminho_landcover) as src_landcover:
             raster_landcover = src_landcover.read(1)
             inv_transform_landcover = ~src_landcover.transform
@@ -586,7 +558,6 @@ def obter_dados_do_raster(indice_atual, r, dem, dsm, landcover, d, distancia, ar
                 if (np.floor(r[i][0]) == np.floor(r[indice_atual_land][0])) and (
                         np.floor(r[i][1]) == np.floor(r[indice_atual_land][1])):
                     pixel_x1_lancover, pixel_y1_landcover = inv_transform_landcover * (r[i][0], r[i][1])
-                    # landcover.append(raster_landcover[int(pixel_y1_landcover)][int(pixel_x1_lancover)])
                     landcover[3 * i] = raster_landcover[int(pixel_y1_landcover)][int(pixel_x1_lancover)]
                     if i < np.shape(r)[0] - 1:
                         lonpasso = (r[i + 1][0] - r[i][0]) / 3
@@ -597,19 +568,13 @@ def obter_dados_do_raster(indice_atual, r, dem, dsm, landcover, d, distancia, ar
                             r[i][0] + 2 * lonpasso, r[i][1] + 2 * latpasso)
                         if (np.floor(r[i][0] + 2 * lonpasso) == np.floor(r[indice_atual_land][0])) and (
                                 np.floor(r[i][1] + 2 * latpasso) == np.floor(r[indice_atual_land][1])):
-                            # landcover.append(raster_landcover[int(pixel_y2_landcover)][int(pixel_x2_lancover)])
-                            # landcover.append(raster_landcover[int(pixel_y3_landcover)][int(pixel_x3_lancover)])
                             landcover[3 * i + 1] = raster_landcover[int(pixel_y2_landcover)][int(pixel_x2_lancover)]
                             landcover[3 * i + 2] = raster_landcover[int(pixel_y3_landcover)][int(pixel_x3_lancover)]
                         elif (np.floor(r[i][0] + lonpasso) == np.floor(r[indice_atual_land][0])) and (
                                 np.floor(r[i][1] + latpasso) == np.floor(r[indice_atual_land][1])):
-                            # landcover.append(raster_landcover[int(pixel_y2_landcover)][int(pixel_x2_lancover)])
-                            # landcover.append(raster_landcover[int(pixel_y2_landcover)][int(pixel_x2_lancover)])
                             landcover[3 * i + 1] = raster_landcover[int(pixel_y2_landcover)][int(pixel_x2_lancover)]
                             landcover[3 * i + 2] = raster_landcover[int(pixel_y2_landcover)][int(pixel_x2_lancover)]
                         else:
-                            # landcover.append(raster_landcover[int(pixel_y1_landcover)][int(pixel_x1_lancover)])
-                            # landcover.append(raster_landcover[int(pixel_y1_landcover)][int(pixel_x1_lancover)])
                             landcover[3 * i + 1] = raster_landcover[int(pixel_y2_landcover)][int(pixel_x2_lancover)]
                             landcover[3 * i + 2] = raster_landcover[int(pixel_y2_landcover)][int(pixel_x2_lancover)]
                     indice_atual_land = i
@@ -629,10 +594,7 @@ def obter_dados_do_raster(indice_atual, r, dem, dsm, landcover, d, distancia, ar
                     dist = distancia * i
 
                     alt_dem = raster[int(pixel_y1)][int(pixel_x1)]
-
-                    # d.append(dist)
                     d[i] = dist
-                    # dem.append(alt_dem)
                     dem[i] = alt_dem
                     indice_atual = i
                 else:
@@ -647,10 +609,6 @@ def perfil(p1, p2, local_Configuracao, area=0):
     um cada um dos Rasters e une os perfis de Rasters diferentes
     """
     indice_atual = 0
-    # dem = []
-    # dsm = []
-    # landcover = []
-    # d = []
     caminho, caminho_dsm, caminho_landcover = obter_raster(p1, p1)
     with rasterio.open(caminho) as src:
         transform = src.transform
@@ -1391,7 +1349,7 @@ def ptp():
                     print(p3)
                     print(p4)
                     shapefile_path = 'shapefiles\derivados\construcoes.shp'
-                    #shapefile_path = shp_extrair.extrarir_do_rio(p3, p4)
+                    shapefile_path = shp_extrair.extrarir_do_rio(p3, p4)
                     shapeData = RayTracing.load_shapefile(shapefile_path)
                     sigma_conreto = conreto_c * (f * 1e6) ** conreto_d
                     ray_paths, quinas, distancia_rays = RayTracing.trace_rays(shapeData, p3, p4, num_azimuths=2000,
@@ -1525,7 +1483,7 @@ def ptp():
             ax2 = ax1.twinx()
 
             ax2.plot(distancia, vet_urb, label='Perda', color="red")
-            ax2.set_ylabel('Perda', color='red')
+            ax2.set_ylabel('Perda em dB', color='red')
             ax2.tick_params(axis='y', labelcolor='red')
 
             titulo = 'Perfil do terreno ' + fig_name + ', e perda devido às construções'
@@ -1545,7 +1503,7 @@ def ptp():
             ax2 = ax1.twinx()
 
             ax2.plot(distancia, vet_veg, label='Perda', color="red")
-            ax2.set_ylabel('Perda', color='red')
+            ax2.set_ylabel('Perda em dB', color='red')
             ax2.tick_params(axis='y', labelcolor='red')
 
             titulo = 'Perfil do terreno ' + fig_name + ', e perda devido à vegetação'
@@ -1565,7 +1523,7 @@ def ptp():
             ax2 = ax1.twinx()
 
             ax2.plot(distancia, vet_fsl, label='Perda', color="red")
-            ax2.set_ylabel('Perda', color='red')
+            ax2.set_ylabel('Perda em dB', color='red')
             ax2.tick_params(axis='y', labelcolor='red')
 
             titulo = 'Perfil do terreno ' + fig_name + ', e perda devido ao espaço livre'
