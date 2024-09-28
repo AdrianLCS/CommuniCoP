@@ -343,48 +343,49 @@ def modificar_e_salvar_raster(raster_path, ponto, raio, limear, ht, hr, f, preci
 
                     hmed = (dem[0] + dem[-1]) / 2
 
-                    if visada:
-                        data[linha][coluna] = 2
-                    else:
-
-                        if local_Configuracao["urb"]:
-                            if ((landcover[-1] == 50) or (landcover[-2] == 50) or (landcover[-3] == 50)) and (
-                                    h_urb > hg2 + min_alt):
-                                urb = Modelos.ikegami_model(h_urb, hg2, f, w=float(largura_da_rua))
-                            else:
-                                urb = 0
+                    if local_Configuracao["urb"]:
+                        if ((landcover[-1] == 50) or (landcover[-2] == 50) or (landcover[-3] == 50)) and (
+                                h_urb > hg2 + min_alt):
+                            urb = Modelos.ikegami_model(h_urb, hg2, f, w=float(largura_da_rua))
                         else:
                             urb = 0
+                    else:
+                        urb = 0
 
-                        if local_Configuracao["veg"]:
-                            espesura = obter_vegeta_atravessada(f, indice_visada_r, dem, landcover, dsm, hr, ht,
-                                                                distancia,
-                                                                indice_visada)
-                            vegetacao = Modelos.atenuaca_vegetacao_antiga_ITU(f, espesura, 0.55)
-                        else:
-                            vegetacao = 0
+                    if local_Configuracao["veg"]:
+                        espesura = obter_vegeta_atravessada(f, indice_visada_r, dem, landcover, dsm, hr, ht,
+                                                            distancia,
+                                                            indice_visada)
+                        vegetacao = Modelos.atenuaca_vegetacao_antiga_ITU(f, espesura, 0.55)
+                    else:
+                        vegetacao = 0
 
-                        dls, hs = parametros_difracao(distancia, dsm, hg1, hg2)
-                        espaco_livre = Modelos.friis_free_space_loss_db(f, d)
-                        epstein = Modelos.modelo_epstein_peterson(dls, hs, f)
-                        itm, variabilidade_situacao, At, dls_LR = Modelos.longLq_rice_model(hmed, f, hg1, hg2, he1,
-                                                                                            he2,
-                                                                                            d,
-                                                                                            yt, qs, dl1,
-                                                                                            dl2,
-                                                                                            Dh, visada,
-                                                                                            teta1, teta2,
-                                                                                            polarizacao='v')
+                    dls, hs = parametros_difracao(distancia, dsm, hg1, hg2)
+                    espaco_livre = Modelos.friis_free_space_loss_db(f, d)
+                    epstein = Modelos.modelo_epstein_peterson(dls, hs, f)
+                    itm, variabilidade_situacao, At, dls_LR = Modelos.longLq_rice_model(hmed, f, hg1, hg2, he1,
+                                                                                        he2,
+                                                                                        d,
+                                                                                        yt, qs, dl1,
+                                                                                        dl2,
+                                                                                        Dh, visada,
+                                                                                        teta1, teta2,
+                                                                                        polarizacao='v')
 
-                        if (Dh > 100) and (d <= 0.7 * dls_LR) or (d < 2000):
-                            p = (espaco_livre + epstein + vegetacao + urb)
-                        else:
-                            p = (espaco_livre + itm + vegetacao + urb + variabilidade_situacao)
+                    if (Dh > 100) and (d <= 0.7 * dls_LR) or (d < 2000):
+                        p = (espaco_livre + epstein + vegetacao + urb)
+                    else:
+                        p = (espaco_livre + itm + vegetacao + urb + variabilidade_situacao)
 
-                        if p <= limear:
-                            data[linha][coluna] = p
-                        else:
-                            data[linha][coluna] = limear
+                    if p <= limear:
+                        data[linha][coluna] = p
+                    else:
+                        data[linha][coluna] = limear
+
+
+
+
+
                 else:
                     data[linha][coluna] = limear
 
