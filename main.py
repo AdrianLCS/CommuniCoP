@@ -382,10 +382,6 @@ def modificar_e_salvar_raster(raster_path, ponto, raio, limear, ht, hr, f, preci
                     else:
                         data[linha][coluna] = limear
 
-
-
-
-
                 else:
                     data[linha][coluna] = limear
 
@@ -522,7 +518,7 @@ def obter_dados_do_raster(indice_atual, r, dem, dsm, landcover, d, distancia, ar
                     if int(pixel_x1) == 3600 or int(pixel_y1) == 3600:  # confere se não é final do raster(evita erros)
                         pixel_x1 = 3599
                         pixel_y1 = 3599
-                    alt_dem = raster[int(pixel_y1)][int(pixel_x1)]  # adiciona o ponto
+                    alt_dem = raster[int(pixel_y1), int(pixel_x1)]  # adiciona o ponto
                     d[i] = dist # adiciona a distância no vetor disância
                     dem[i] = alt_dem
                     indice_atual_dem = i
@@ -544,7 +540,7 @@ def obter_dados_do_raster(indice_atual, r, dem, dsm, landcover, d, distancia, ar
                     if int(pixel_x1) == 3600 or int(pixel_y1) == 3600:
                         pixel_x1 = 3599
                         pixel_y1 = 3599
-                    alt_dsm = raster_dsm[int(pixel_y1_dsm)][int(pixel_x1_dsm)]
+                    alt_dsm = raster_dsm[int(pixel_y1_dsm), int(pixel_x1_dsm)]
                     dsm[i] = alt_dsm
                     indice_atual_dsm = i
                 else:
@@ -559,7 +555,7 @@ def obter_dados_do_raster(indice_atual, r, dem, dsm, landcover, d, distancia, ar
                 if (np.floor(r[i][0]) == np.floor(r[indice_atual_land][0])) and (
                         np.floor(r[i][1]) == np.floor(r[indice_atual_land][1])):
                     pixel_x1_lancover, pixel_y1_landcover = inv_transform_landcover * (r[i][0], r[i][1])
-                    landcover[3 * i] = raster_landcover[int(pixel_y1_landcover)][int(pixel_x1_lancover)]
+                    landcover[3 * i] = raster_landcover[int(pixel_y1_landcover), int(pixel_x1_lancover)]
                     if i < np.shape(r)[0] - 1:
                         lonpasso = (r[i + 1][0] - r[i][0]) / 3
                         latpasso = (r[i + 1][1] - r[i][1]) / 3
@@ -569,15 +565,15 @@ def obter_dados_do_raster(indice_atual, r, dem, dsm, landcover, d, distancia, ar
                             r[i][0] + 2 * lonpasso, r[i][1] + 2 * latpasso)
                         if (np.floor(r[i][0] + 2 * lonpasso) == np.floor(r[indice_atual_land][0])) and (
                                 np.floor(r[i][1] + 2 * latpasso) == np.floor(r[indice_atual_land][1])):
-                            landcover[3 * i + 1] = raster_landcover[int(pixel_y2_landcover)][int(pixel_x2_lancover)]
-                            landcover[3 * i + 2] = raster_landcover[int(pixel_y3_landcover)][int(pixel_x3_lancover)]
+                            landcover[3 * i + 1] = raster_landcover[int(pixel_y2_landcover), int(pixel_x2_lancover)]
+                            landcover[3 * i + 2] = raster_landcover[int(pixel_y3_landcover), int(pixel_x3_lancover)]
                         elif (np.floor(r[i][0] + lonpasso) == np.floor(r[indice_atual_land][0])) and (
                                 np.floor(r[i][1] + latpasso) == np.floor(r[indice_atual_land][1])):
-                            landcover[3 * i + 1] = raster_landcover[int(pixel_y2_landcover)][int(pixel_x2_lancover)]
-                            landcover[3 * i + 2] = raster_landcover[int(pixel_y2_landcover)][int(pixel_x2_lancover)]
+                            landcover[3 * i + 1] = raster_landcover[int(pixel_y2_landcover), int(pixel_x2_lancover)]
+                            landcover[3 * i + 2] = raster_landcover[int(pixel_y2_landcover), int(pixel_x2_lancover)]
                         else:
-                            landcover[3 * i + 1] = raster_landcover[int(pixel_y2_landcover)][int(pixel_x2_lancover)]
-                            landcover[3 * i + 2] = raster_landcover[int(pixel_y2_landcover)][int(pixel_x2_lancover)]
+                            landcover[3 * i + 1] = raster_landcover[int(pixel_y2_landcover), int(pixel_x2_lancover)]
+                            landcover[3 * i + 2] = raster_landcover[int(pixel_y2_landcover), int(pixel_x2_lancover)]
                     indice_atual_land = i
                 else:
                     break
@@ -594,7 +590,7 @@ def obter_dados_do_raster(indice_atual, r, dem, dsm, landcover, d, distancia, ar
                     pixel_x1, pixel_y1 = inv_transform * (r[i][0], r[i][1])
                     dist = distancia * i
 
-                    alt_dem = raster[int(pixel_y1)][int(pixel_x1)]
+                    alt_dem = raster[int(pixel_y1), int(pixel_x1)]
                     d[i] = dist
                     dem[i] = alt_dem
                     indice_atual = i
@@ -747,43 +743,12 @@ def ajuste(elevacao, distancia, hg1, hg2, dl1, dl2):
     xb = len(elevacao) - 1 - int(min(15 * hg2, 0.1 * dl2) / distancia[1])
     zorig = elevacao[xa:xb + 1]
     xorig = np.array(range(xa, xb + 1))
-    zn = []
-    xn = []
-    u = 0
 
-    # reduzir qtd de pontos usar quando for subamostrar
-    while u <= len(xorig) - 5:
-        xaux = np.mean(xorig[u:u + 4])
-        zaux = np.mean(zorig[u:u + 4])
-        xn.append(xaux)
-        zn.append(zaux)
-        u = u + 5
-    # z = np.array(zorig)
-    # x = np.array(xorig)
-    if len(zorig) > 300:
-        z = np.array(zn)
-        x = np.array(xn)
-    else:
-        z = np.array(zorig)
-        x = np.array(xorig)
+    z = zorig
 
-    # ajuste
-    n = len(x)
-    sx = 0
-    sy = 0
-    syx = 0
-    s2x = 0
-    for i in range(len(x)):
-        sx = sx + x[i]
-        sy = sy + z[i]
-        s2x = s2x + x[i] ** 2
-        syx = syx + z[i] * x[i]
-
+    coef = np.polyfit(xorig, zorig, 1)
+    zl = np.polyval(coef, xorig)
     try:
-        c1 = ((syx / (n * s2x - (sx ** 2))) * n) - ((sy / (n * s2x - (sx ** 2))) * sx)
-        c0 = ((s2x / (n * s2x - (sx ** 2))) * sy) - ((syx / (n * s2x - (sx ** 2))) * sx)
-        zl = c1 * x + c0
-        # calculo do he
         he1 = max(0, min(z[0], z[0] - zl[0])) + hg1
         he2 = max(0, min(z[-1], z[-1] - zl[-1])) + hg2
     except:
