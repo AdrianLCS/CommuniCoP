@@ -83,7 +83,7 @@
                 <th>Perda Total (dB)</th>
                 <th>Pot recebida no {{ pt1 }} (dBm)</th>
                 <th>Pot recebida no {{ pt2 }} (dBm)</th>
-                <th>Perda pelo modelo Ray Tracing</th>
+                <th>Perda pelo modelo Ray Tracing raltiva ao espaço livre (dB)</th>
                 <th>Estimativa</th>
             </tr>
             <tr>
@@ -93,7 +93,14 @@
             </tr>
         </table>
 
-        <img src="{{ figura }}" alt="Imagem">
+        <div class="image-grid">
+            <img src="{{ figura1 }}" alt="Imagem 1">
+            <img src="{{ figura2 }}" alt="Imagem 2">
+            <img src="{{ figura3 }}" alt="Imagem 3">
+            <img src="{{ figura4 }}" alt="Imagem 4">
+            <img src="{{ figura5 }}" alt="Imagem 5">
+            <img src="{{ figura6 }}" alt="Imagem 6">
+        </div>
     </div>
 
     <style>
@@ -157,6 +164,19 @@
             border: 1px solid black;
             padding: 8px;
             text-align: center;
+        }
+
+        /* Estilo para a grade das imagens */
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr); /* 2 colunas */
+            grid-gap: 10px; /* Espaço entre as imagens */
+            justify-items: center; /* Centraliza as imagens horizontalmente */
+        }
+
+        .image-grid img {
+            max-width: 100%; /* Ajusta a imagem ao tamanho da célula */
+            height: auto;
         }
     </style>
 </body>

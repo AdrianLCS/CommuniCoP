@@ -1270,7 +1270,7 @@ def ptp():
     local_perdas = {}
     parametros_do_radio = []
     fig_name = ''
-    figura = ''
+    figura1,figura2,figura3,figura4,figura5,figura6 = '','','','','',''
     ht, hr, potenciat, potenciar, sensibilidadet, sensibilidader, g1, g2 = 0, 0, 0, 0, 0, 0, 0, 0
     p1 = ()
     p2 = ()
@@ -1281,8 +1281,8 @@ def ptp():
     yt = 1  # é a perda pelo clima, adotar esse valor padrao inicialmente
     qs = int(local_Configuracao['sit'])  # 70% das situacões
     if request.method == "POST":
-        pt1=request.form.get("ponto1")
-        pt2=request.form.get("ponto2")
+        pt1 = request.form.get("ponto1")
+        pt2 = request.form.get("ponto2")
         # calcular perda Aqui antes das operacoes abaixo
         if pt1 and pt2 and request.form.get("f"):
             fig_name = str(request.form.get("ponto1")) + "_" + str(request.form.get("ponto2"))
@@ -1293,7 +1293,7 @@ def ptp():
                     potenciat = float(i['pot'])
                     ant = i['ant']
                     num = 0
-                    radt=i['nome']
+                    radt = i['nome']
                     for y in range(len(local_radios)):
                         if local_radios[y]['nome'] == i['radio']:
                             num = y
@@ -1419,6 +1419,11 @@ def ptp():
                             'resultado': resultado}
 
             vet_perdas = np.zeros(len(dem))
+            vet_terreno = np.zeros(len(dem))
+            vet_urb = np.zeros(len(dem))
+            vet_veg = np.zeros(len(dem))
+            vet_fsl= np.zeros(len(dem))
+            vet_ptot = np.zeros(len(dem))
             for u in range(len(dem)):
                 if u > 5:
                     d, hg1, hg2, dl1, dl2, teta1, teta2, he1, he2, Dh, h_urb, visada, indice_visada_r, indice_visada = obter_dados_do_perfil(
@@ -1453,11 +1458,18 @@ def ptp():
                         urb = Modelos.ikegami_model(h_urb, hg2, f)
                     else:
                         urb = 0
-                    vet_perdas[u] = itm
                     vegetacao = Modelos.atenuaca_vegetacao_antiga_ITU(f, espesura)
-                    vet_perdas[u] = potencia_dbw - (vegetacao + urb + Perda_por_terreno + espaco_livre)
+                    perdtot = vegetacao + urb + Perda_por_terreno + espaco_livre
+                    limear_los = potencia_dbw-sensi_ref
 
+                    vet_perdas[u] = potencia_dbw - perdtot
+                    vet_terreno[u] = Perda_por_terreno
+                    vet_urb[u] = urb
+                    vet_veg[u] = vegetacao
+                    vet_fsl[u] = espaco_livre
+                    vet_ptot[u] = perdtot
 
+            ########CRIA O GRAFICO DE POTENCIA DE RECEPÇÃO AO LONGO DO PERFIL DO TERRENO########
             fig, ax1 = plt.subplots()
             ax1.plot(distancia, dem, label='Perfil do terreno', color="blue")
             # ax1.plot(distancia, sperficie, label='Perfil do terreno', color="green")
@@ -1477,12 +1489,123 @@ def ptp():
             titulo = 'Perfil do terreno ' + fig_name + ', e potência recebida'
             plt.title(titulo)
             fig.tight_layout()
-            figura = "static/imagens/perfil_" + fig_name + ".jpg"
+            figura1 = "static/imagens/perfil_" + fig_name + ".jpg"
             # fig.figure(figsize=(10, 5))
-            fig.savefig(figura, format="jpg")
+            fig.savefig(figura1, format="jpg")
 
-    return render_template('ptp.html', perdas=local_perdas, markers=local_markers, figura=figura,
-                           parametros_do_radio=parametros_do_radio, pt2=pt2,pt1=pt1)
+            ########CRIA O GRAFICO DE PERDA DEVIDO AO TERRENO AO LONGO DO PERFIL DO TERRENO########
+            fig, ax1 = plt.subplots()
+            ax1.plot(distancia, dem, label='Perfil do terreno', color="blue")
+            # ax1.plot(distancia, sperficie, label='Perfil do terreno', color="green")
+            ax1.set_xlabel('Distância (m)')
+            ax1.set_ylabel('Elevação do terreno (m)', color='blue')
+            ax1.tick_params(axis='y', labelcolor='blue')
+
+            ax2 = ax1.twinx()
+
+            ax2.plot(distancia, vet_terreno, label='Perda em dB', color="red")
+            ax2.set_ylabel('Perda em dB', color='red')
+            ax2.tick_params(axis='y', labelcolor='red')
+
+            titulo = 'Perfil do terreno ' + fig_name + ', e perda devido ao terreno'
+            plt.title(titulo)
+            fig.tight_layout()
+            figura3 = "static/imagens/perfil_" + fig_name + "_perda_terreno" + ".jpg"
+            # fig.figure(figsize=(10, 5))
+            fig.savefig(figura3, format="jpg")
+
+            ########CRIA O GRAFICO DE PERDA DEVIDO AO FATOR URBANO AO LONGO DO PERFIL DO TERRENO########
+            fig, ax1 = plt.subplots()
+            ax1.plot(distancia, dem, label='Perfil do terreno', color="blue")
+            # ax1.plot(distancia, sperficie, label='Perfil do terreno', color="green")
+            ax1.set_xlabel('Distância (m)')
+            ax1.set_ylabel('Elevação do terreno (m)', color='blue')
+            ax1.tick_params(axis='y', labelcolor='blue')
+
+            ax2 = ax1.twinx()
+
+            ax2.plot(distancia, vet_urb, label='Perda', color="red")
+            ax2.set_ylabel('Perda', color='red')
+            ax2.tick_params(axis='y', labelcolor='red')
+
+            titulo = 'Perfil do terreno ' + fig_name + ', e perda devido às construções'
+            plt.title(titulo)
+            fig.tight_layout()
+            figura4 = "static/imagens/perfil_" + fig_name + "_perda_urb" + ".jpg"
+            fig.savefig(figura4, format="jpg")
+
+            ########CRIA O GRAFICO DE PERDA DEVIDO A VEGETAÇÃO AO LONGO DO PERFIL DO TERRENO########
+            fig, ax1 = plt.subplots()
+            ax1.plot(distancia, dem, label='Perfil do terreno', color="blue")
+            # ax1.plot(distancia, sperficie, label='Perfil do terreno', color="green")
+            ax1.set_xlabel('Distância (m)')
+            ax1.set_ylabel('Elevação do terreno (m)', color='blue')
+            ax1.tick_params(axis='y', labelcolor='blue')
+
+            ax2 = ax1.twinx()
+
+            ax2.plot(distancia, vet_veg, label='Perda', color="red")
+            ax2.set_ylabel('Perda', color='red')
+            ax2.tick_params(axis='y', labelcolor='red')
+
+            titulo = 'Perfil do terreno ' + fig_name + ', e perda devido à vegetação'
+            plt.title(titulo)
+            fig.tight_layout()
+            figura5 = "static/imagens/perfil_" + fig_name + "_perda_veg" + ".jpg"
+            fig.savefig(figura5, format="jpg")
+
+            ########CRIA O GRAFICO DE PERDA DEVIDO AO ESPAÇO LIVRE AO LONGO DO PERFIL DO TERRENO########
+            fig, ax1 = plt.subplots()
+            ax1.plot(distancia, dem, label='Perfil do terreno', color="blue")
+            # ax1.plot(distancia, sperficie, label='Perfil do terreno', color="green")
+            ax1.set_xlabel('Distância (m)')
+            ax1.set_ylabel('Elevação do terreno (m)', color='blue')
+            ax1.tick_params(axis='y', labelcolor='blue')
+
+            ax2 = ax1.twinx()
+
+            ax2.plot(distancia, vet_fsl, label='Perda', color="red")
+            ax2.set_ylabel('Perda', color='red')
+            ax2.tick_params(axis='y', labelcolor='red')
+
+            titulo = 'Perfil do terreno ' + fig_name + ', e perda devido ao espaço livre'
+            plt.title(titulo)
+            fig.tight_layout()
+            figura6 = "static/imagens/perfil_" + fig_name + "_perda_fsl" + ".jpg"
+            fig.savefig(figura6, format="jpg")
+
+
+            ########CRIA O GRAFICO DE PERDA TOTAL AO LONGO DO PERFIL DO TERRENO########
+            fig, ax1 = plt.subplots()
+            ax1.plot(distancia, dem, label='Perfil do terreno', color="blue")
+            # ax1.plot(distancia, sperficie, label='Perfil do terreno', color="green")
+            ax1.set_xlabel('Distância (m)')
+            ax1.set_ylabel('Elevação do terreno (m)', color='blue')
+            ax1.tick_params(axis='y', labelcolor='blue')
+
+            ax2 = ax1.twinx()
+
+            ax2.plot(distancia, vet_ptot, label='Perda', color="red")
+            ax2.set_ylabel('Perda total em dB', color='red')
+            ax2.tick_params(axis='y', labelcolor='red')
+
+            ax2.axhline(y=limear_los, color='green', linestyle='--', label=f'Limiar de perda {limear_los} dB')
+
+            ax2.legend()
+            titulo = 'Perfil do terreno ' + fig_name + ', e perda total'
+            plt.title(titulo)
+            fig.tight_layout()
+            figura2 = "static/imagens/perfil_" + fig_name + "_perda_total" + ".jpg"
+            # fig.figure(figsize=(10, 5))
+            fig.savefig(figura2, format="jpg")
+
+
+
+
+
+    return render_template('ptp.html', perdas=local_perdas, markers=local_markers, figura1=figura1,
+                           parametros_do_radio=parametros_do_radio, pt2=pt2,pt1=pt1, figura2=figura2,
+                           figura3=figura3, figura4=figura4, figura5=figura5, figura6=figura6)
 
 
 @app.route('/area', methods=['GET', 'POST'])
