@@ -1774,6 +1774,26 @@ def carr():
 
     return redirect(url_for('index_map'))
 
+@app.route('/delete_marker', methods=['POST'])
+def delete_marker():
+    if 'username' not in session:
+        return redirect(url_for('login'))
+
+    # Pega o nome da estação de rádio a ser excluída
+    nome_estacao = str(request.form.get('ponto1'))
+
+    # Recupera os marcadores da sessão
+    local_markers = session['markers']
+
+    # Filtra os marcadores removendo o que tem o nome igual ao selecionado
+    local_markers = [marker for marker in local_markers if marker['nome'] != nome_estacao]
+
+        # Atualiza a sessão com a lista de marcadores filtrada
+    session['markers'] = local_markers
+
+    return redirect(url_for('index_map'))
+
+
 
 if __name__ == '__main__':
     app.run(debug=True)
