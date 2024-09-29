@@ -372,7 +372,7 @@ def modificar_e_salvar_raster(raster_path, ponto, raio, limear, ht, hr, f, preci
                                                                                         teta1, teta2,
                                                                                         polarizacao='v')
 
-                    if (Dh > 100) and (d <= 0.7 * dls_LR) or (d < 2000):
+                    if (Dh > 100) and (d <= 0.7 * dls_LR) or (d < 2000) and local_Configuracao["urb"] and local_Configuracao["veg"]:
                         p = (espaco_livre + epstein + vegetacao + urb)
                     else:
                         p = (espaco_livre + itm + vegetacao + urb + variabilidade_situacao)
