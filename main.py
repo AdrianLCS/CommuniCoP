@@ -1596,6 +1596,7 @@ def area():
                 {'nome': nova_cobertura, 'raster': caminho, 'f': float(request.form.get("f")), 'img': img,
                  'h': float(ht)})
         session['cobertura'] = local_cobertura
+        return redirect(url_for('index_map'))
 
     return render_template('area.html', markers=local_markers)
 
@@ -1639,6 +1640,7 @@ def addradio():
 
         local_radios.append(radio_adicionado)
         session['radios'] = local_radios
+        return redirect(url_for('index_map'))
         print(local_radios)
 
     return render_template('addradio.html')
@@ -1669,7 +1671,7 @@ def addmapa():
                 img = img.convert('RGB')
                 img.save(caminho_completo[:-4] + '.jpg', 'JPEG')
 
-            return 'Arquivo enviado com sucesso'
+            return redirect(url_for('index_map'))
         else:
             return 'Arquivo não suportado'
 
@@ -1703,7 +1705,7 @@ def upload_file():
                 img = img.convert('RGB')
                 img.save(caminho_completo[:-4] + '.jpg', 'JPEG')
 
-        return 'Arquivo enviado com sucesso'
+        return redirect(url_for('index_map'))
     else:
         return 'Arquivo não suportado'
 
