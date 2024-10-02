@@ -1318,7 +1318,7 @@ def ptp():
                     shapefile_path = shp_extrair.extrarir_do_rio(p3, p4)
                     shapeData = RayTracing.load_shapefile(shapefile_path)
                     sigma_conreto = conreto_c * (f * 1e6) ** conreto_d
-                    ray_paths, quinas, distancia_rays = RayTracing.trace_rays(shapeData, p3, p4, num_azimuths=2000,
+                    ray_paths, quinas, distancia_rays = RayTracing.trace_rays(shapeData, p3, p4, num_azimuths=1000,
                                                                               max_reflections=3, max_diffractions=1)
                     perda_raytracing = RayTracing.calcula_enlace(p3, p4, hg1, hg2, ray_paths, er_concreto, er_solo,
                                                                  sigma_conreto, sigma_solo,f,num_azimuths=1000,polarizacao='V')
@@ -1348,6 +1348,7 @@ def ptp():
             vet_veg = np.zeros(len(dem))
             vet_fsl= np.zeros(len(dem))
             vet_ptot = np.zeros(len(dem))
+            limear_los = potencia_dbw - sensi_ref
             for u in range(len(dem)):
                 if u > 5:
                     d, hg1, hg2, dl1, dl2, teta1, teta2, he1, he2, Dh, h_urb, visada, indice_visada_r, indice_visada = obter_dados_do_perfil(
@@ -1384,7 +1385,6 @@ def ptp():
                         urb = 0
                     vegetacao = Modelos.atenuaca_vegetacao_antiga_ITU(f, espesura)
                     perdtot = vegetacao + urb + Perda_por_terreno + espaco_livre
-                    limear_los = potencia_dbw-sensi_ref
 
                     vet_perdas[u] = potencia_dbw - perdtot
                     vet_terreno[u] = Perda_por_terreno

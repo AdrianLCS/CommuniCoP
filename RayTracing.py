@@ -128,7 +128,7 @@ def reflec_raio(segment, ray_position, itersec_point):
     return None
 
 
-def trace_rays(shapeData, tx_position, rx_position, num_azimuths=2000, max_reflections=3, max_diffractions=1,
+def trace_rays(shapeData, tx_position, rx_position, num_azimuths=1000, max_reflections=3, max_diffractions=1,
                diffraction_distance=0.5):
     """Trace rays from tx_position to rx_position in 2D."""
     quinas = []
@@ -331,8 +331,7 @@ def impedancia(e, u, sig, freq):
 
 
 def beta(e, u, sig, freq):
-    return 2 * np.pi * freq * 1e6 * ((u * e) ** 0.5) * (
-            ((1 / 2) * (((1 + ((sig / (2 * np.pi * freq * 1e6 * e)) ** 0.5)) ** 0.5) + 1)) ** 0.5)
+    return 2 * np.pi * freq * 1e6 * ((u * e) ** 0.5) #* (((1 / 2) * (((1 + ((sig / (2 * np.pi * freq * 1e6 * e)) ** 0.5)) ** 0.5) + 1)) ** 0.5)
 
 
 
@@ -341,7 +340,9 @@ def beta(e, u, sig, freq):
 def calcula_enlace(tx_position, rx_position, hg1, hg2, ray_paths, er, ersolo, sigma, sigmasolo, f, num_azimuths,polarizacao='V'):
     impe = impedancia(e0 * er, mi0, sigma, f)
     bet0 = beta(e0, mi0, 0, f)
-    bet = beta(e0 * ersolo, mi0, sigmasolo, f)
+    print(bet0)
+    bet = beta(e0 * er, mi0, sigmasolo, f)
+    print(bet)
     betsolo = beta(e0 * ersolo, mi0, sigmasolo, f)
     f0 = 47.7134515924  # em MHz.m
     k = f / f0
