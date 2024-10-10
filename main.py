@@ -373,7 +373,7 @@ def modificar_e_salvar_raster(raster_path, ponto, raio, limear, ht, hr, f, preci
                                                                                         polarizacao='v')
 
                     if (Dh > 100) and (d <= 0.7 * dls_LR) or (d < 2000) and local_Configuracao["urb"] and local_Configuracao["veg"]:
-                        p = (espaco_livre + epstein + vegetacao + urb)
+                        p = (espaco_livre + epstein + vegetacao + urb + variabilidade_situacao)
                     else:
                         p = (espaco_livre + itm + vegetacao + urb + variabilidade_situacao)
 
@@ -1284,7 +1284,7 @@ def ptp():
 
             # colocar aqu uma funcao que adiciona a perda por vegetacao
             if (((Dh>90) and (d<=0.7*dls_LR)))or (d < 2000):
-                Perda_por_terreno = (epstein)
+                Perda_por_terreno = (epstein + variabilidade_situacao)
             else:
                 Perda_por_terreno = (itm + variabilidade_situacao)
             perda = Perda_por_terreno + vegetacao + urb + espaco_livre
