@@ -1042,7 +1042,7 @@ def addfoliun(local_mapas, local_cobertura):
     dicionario_cores = {
         0.3: 'blue',
         0.4: '#0040FF',  # Intermediate blue
-        0.45: '#0080FF',  # Lighter blue
+        0.45:'#0080FF',  # Lighter blue
         0.5: '#00BFFF',  # Cyan
         0.55: '#00FFBF',  # Greenish-cyan
         0.57: '#00FF80',  # Light green
@@ -1374,7 +1374,7 @@ def ptp():
                                                                                       teta1, teta2, polarizacao='v',
                                                                                       simplificado=0)
                     if (((Dh > 90) and (d <= 0.7 * dls_LR))) or (d < 2000):
-                        Perda_por_terreno = (epstein)
+                        Perda_por_terreno = (itm + variabilidade_situacao)#(epstein)
                     else:
                         Perda_por_terreno = (itm + variabilidade_situacao)
 
