@@ -218,6 +218,7 @@ def trace_rays(shapeData, tx_position, rx_position, num_azimuths=1000, max_refle
                     if (np.dot(dir_tx_rx, ray_direction) > 0.707) and not (
                             closest_shape in shape_ja_testados) and diffractions < max_diffractions and reflections == 0:
                         # PROCURAR QUINA
+                        print('procura_quina')
                         shape_ja_testados.append(closest_shape)
                         path_difrac = tuple(path)
                         path_difrac = list(path_difrac)
@@ -248,7 +249,9 @@ def trace_rays(shapeData, tx_position, rx_position, num_azimuths=1000, max_refle
                                 tx_rx_dir=tx_rx_dir/np.linalg.norm(tx_rx_dir)
                                 quina_rx_dir = quina_rx_dir / np.linalg.norm(quina_rx_dir)
                                 cosseno = np.dot(tx_rx_dir, quina_rx_dir)
-                                if cosseno>0.1:
+                                if cosseno>0:
+                                    print('caiu_cosseno')
+                                    print(p_intesec)
                                     p_intesec2 = np.array(tuple(p_intesec)) + 0.000001 * quina_rx_dir
                                     rx_quina = LineString([rx_position[:2], p_intesec - 0.000001 * quina_rx_dir])
                                     quina_rx = LineString([p_intesec2, rx_position[:2]])
@@ -256,15 +259,25 @@ def trace_rays(shapeData, tx_position, rx_position, num_azimuths=1000, max_refle
 
                                     # intersecao_dif = GeometryCollection()
                                     intersect2 = rx_quina.intersection(closest_shape)
+                                    print(intersect2)
                                     vazio = False
-                                    if intersect2.geom_type == 'Point' or intersect2.is_empty:
+                                    if intersect2.geom_type == 'Point' or intersect2.is_empty:# or p_intesec.distance(intersect2) < 0.000001:
                                         vazio = True
                                         for shapedif in shapeData.geometry:
                                             intersecao_dif = quina_rx.intersection(shapedif)
                                             if not intersecao_dif.is_empty:
                                                 vazio = False
 
+                                    elif intersect2.geom_type == 'LineString':
+                                        if intersect2.length<0.0000005:
+                                            vazio = True
+                                            for shapedif in shapeData.geometry:
+                                                intersecao_dif = quina_rx.intersection(shapedif)
+                                                if not intersecao_dif.is_empty:
+                                                    vazio = False
+
                                     if vazio:
+                                        print('entrou_vazio2')
                                         path_difrac.append(
                                             (p_intesec2[0], p_intesec2[1], 0, 0, 'difrac'))
                                         pnum = 1
@@ -331,7 +344,8 @@ def impedancia(e, u, sig, freq):
 
 
 def beta(e, u, sig, freq):
-    return 2 * np.pi * freq * 1e6 * ((u * e) ** 0.5) #* (((1 / 2) * (((1 + ((sig / (2 * np.pi * freq * 1e6 * e)) ** 0.5)) ** 0.5) + 1)) ** 0.5)
+    raiz=(1+((sig/(2*np.pi*freq*1e6*e))**2))**0.5
+    return 2 * np.pi * freq * 1e6 * ((u * e) ** 0.5) * (((1 / 2) * (raiz + 1)) ** 0.5)
 
 
 
@@ -349,8 +363,10 @@ def calcula_enlace(tx_position, rx_position, hg1, hg2, ray_paths, er, ersolo, si
 
     parametros = []
     d_ref = getDistanceBetweenPointsNew(tx_position[1], tx_position[0], rx_position[1], rx_position[0])
+
     print('ray_paths')
     print(ray_paths)
+    print(d_ref)
     cont = 0
     for gg in range(len(ray_paths)):
         path = ray_paths[gg]
@@ -367,21 +383,24 @@ def calcula_enlace(tx_position, rx_position, hg1, hg2, ray_paths, er, ersolo, si
                     intersection_point, incidence_angle, ref_dif = path[i][0:2], path[i][3], path[i][4]
                     d = d + getDistanceBetweenPointsNew(ponto_anterior[1], ponto_anterior[0], intersection_point[1],
                                                         intersection_point[0])
+                    if i==(tamanho-1):
+                        d = d + getDistanceBetweenPointsNew(intersection_point[1], intersection_point[0], rx_position[1],
+                                                            rx_position[0])
 
-                    senfi = (hg1 + hg2) / ((d ** 2 + (hg1 + hg2) ** 2) ** 0.5)
-                    x = (er - 1j * sigma / (2 * np.pi * f * 1e6 * e0))
+                    senfi = path[i][3]
+                    x = (sigma) / (2 * np.pi * f * 1e6 * e0)
                     cos2fi = (1 - senfi ** 2)
                     if polarizacao == 'V':  # E tangente 1º casor¨r¬
-                        re = (senfi - (er - 1j * x - cos2fi) ** 0.5) / (senfi + (er - 1j * x - cos2fi) ** 0.5)
+                        re = (senfi - (((er - 1j * x) - cos2fi) ** 0.5)) / (senfi + (((er - 1j * x) - cos2fi) ** 0.5))
                     else:  # H tangente 2º caso r||
-                        re = (x * senfi - (er - 1j * x - cos2fi) ** 0.5) / (
-                                x * senfi + (er - 1j * x - cos2fi) ** 0.5)
+                        re = ((er-1j*x) * senfi - (((er - 1j * x) - cos2fi) ** 0.5)) / (
+                                (er-1j*x) * senfi + (((er - 1j * x) - cos2fi) ** 0.5))
 
-                    """teta2 = np.cos(np.arcsin(((1 - incidence_angle ** 2) ** 0.5) * bet / bet0))  # lei de snel
+                    teta2 = np.cos(np.arcsin(((1 - incidence_angle ** 2) ** 0.5) * bet0 / bet))  # lei de snel
                     if polarizacao == 'V':  # E tangente 1º casor¨r¬
                         re = (impe * incidence_angle - teta2) / (impe * incidence_angle + teta2)
                     else:  # H tangente 2º caso r||
-                        re = (incidence_angle - impe * teta2) / (incidence_angle + impe * teta2)"""
+                        re = (incidence_angle - impe * teta2) / (incidence_angle + impe * teta2)
 
                     perda = perda * abs(re)
                     fase = fase + cmath.phase(re)
@@ -430,6 +449,7 @@ def calcula_enlace(tx_position, rx_position, hg1, hg2, ray_paths, er, ersolo, si
             parametros.append([perda, fase, d])
 
 
+
         elif cont == 0:
             cont = 1
             perda = 1
@@ -444,18 +464,18 @@ def calcula_enlace(tx_position, rx_position, hg1, hg2, ray_paths, er, ersolo, si
         print(k)
         print(2 * np.pi * (f / 299.792458))
         senfi = (hg1 + hg2) / ((d ** 2 + (hg1 + hg2) ** 2) ** 0.5)
-        x = (ersolo - 1j * sigmasolo / (2 * np.pi * f * 1e6 * e0))
+        x = sigmasolo / (2 * np.pi * f * 1e6 * e0)
         cos2fi = (1 - senfi ** 2)
         if polarizacao == 'V':  # H tangente 2º caso r||
-            re = (x * senfi - (ersolo - 1j * x - cos2fi) ** 0.5) / (x * senfi + (ersolo - 1j * x - cos2fi) ** 0.5)
+            re = ((ersolo - 1j * x) * senfi - (ersolo - 1j * x - cos2fi) ** 0.5) / ((ersolo - 1j * x) * senfi + (ersolo - 1j * x - cos2fi) ** 0.5)
         else:  # E tangente 1º casor¨r¬
-            re = (senfi - (ersolo - 1j * x - cos2fi) ** 0.5) / (senfi + (ersolo - 1j * x - cos2fi) ** 0.5)
+            re = (senfi - ((ersolo - 1j * x) - cos2fi) ** 0.5) / (senfi + ((ersolo - 1j * x) - cos2fi) ** 0.5)
 
         perda = abs(re)
         fase = cmath.phase(re) - Dphi
         parametros.append([perda, fase, d])
-        print('parametros')
-        print(parametros)
+    print('parametros')
+    print(parametros)
 
     ptot = 0
     for i in range(len(parametros)):

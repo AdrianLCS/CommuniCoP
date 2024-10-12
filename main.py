@@ -1317,7 +1317,7 @@ def ptp():
                     shapefile_path = 'shapefiles\derivados\construcoes.shp'
                     shapefile_path = shp_extrair.extrarir_do_rio(p3, p4)
                     shapeData = RayTracing.load_shapefile(shapefile_path)
-                    sigma_conreto = conreto_c * (f * 1e6) ** conreto_d
+                    sigma_conreto = conreto_c * ((f * 1e6) ** conreto_d)
                     ray_paths, quinas, distancia_rays = RayTracing.trace_rays(shapeData, p3, p4, num_azimuths=1000,
                                                                               max_reflections=3, max_diffractions=1)
                     perda_raytracing = RayTracing.calcula_enlace(p3, p4, hg1, hg2, ray_paths, er_concreto, er_solo,
