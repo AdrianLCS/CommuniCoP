@@ -1306,7 +1306,7 @@ def ptp():
                 potencia_dbw = pott2 + g1 + g2
                 sensi_ref = sensibilidadet
 
-            """if modelo == 'Sim':
+            if modelo == 'Sim':
                 if visada:
                     p3 = tuple(p1)
                     p4 = tuple(p2)
@@ -1323,7 +1323,7 @@ def ptp():
                     perda_raytracing = round(perda_raytracing*10)/10
 
                 else:
-                    perda_raytracing = "Não Calculado"""
+                    perda_raytracing = "Não Calculado
 
 
             parametros_do_radio=[[radt, pott1,g1,sensibilidadet,hg1],[radr, pott2,g2,sensibilidader,hg2]]
