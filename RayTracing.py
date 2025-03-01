@@ -1,11 +1,7 @@
 import geopandas as gpd
-import mpmath
-from shapely.geometry import LineString, Point, Polygon, MultiLineString, MultiPolygon, GeometryCollection
+from shapely.geometry import LineString, Point, Polygon
 import numpy as np
 import cmath
-import Modelos
-#from scipy.integrate import quad
-from mpmath import quad, sin, pi, cos
 
 a = 6378137  # m
 b = 6356752  # m
