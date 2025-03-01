@@ -1308,6 +1308,8 @@ def ptp():
 
             if modelo == 'Sim':
                 if visada:
+                    import shp_extrair
+                    import RayTracing
                     p3 = tuple(p1)
                     p4 = tuple(p2)
                     print(p3)
