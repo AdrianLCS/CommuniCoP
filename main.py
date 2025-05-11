@@ -97,7 +97,7 @@ def generate_raster_files(base_string):
             lat = abs(lat)
             lon = abs(lon)
             straux = f"{lat_dir}{lat:02d}{lon_dir}{lon:03d}.tif"
-            raster_files.append(os.path.join("Raster",straux)
+            raster_files.append(os.path.join("Raster",straux))
 
     return raster_files
 
@@ -1742,7 +1742,7 @@ def projetos():
 @app.route('/salv', methods=['GET', 'POST'])
 def salv():
     if request.form.get("nsalv"):
-        arquiv = os.path.join("planejamentos", str(request.form.get("nsalv")+ ".pkl")
+        arquiv = os.path.join("planejamentos", str(request.form.get("nsalv"))+ ".pkl")
         markers = session['markers']
         perdas = session['perdas']
         cobertura = session['cobertura']
@@ -1761,7 +1761,7 @@ def salv():
 @app.route('/carr', methods=['GET', 'POST'])
 def carr():
     if request.form.get("ncarr"):
-        arquiv = os.path.join("planejamentos", str(request.form.get("ncarr")+ ".pkl")
+        arquiv = os.path.join("planejamentos", str(request.form.get("ncarr"))+ ".pkl")
 
         with open(arquiv, 'rb') as arquivo:
             # Carregar as variáveis do arquivo
