@@ -274,7 +274,7 @@ def modificar_e_salvar_raster(raster_path, ponto, raio, limear, ht, hr, f, preci
     #confiabilidade do modelo ITM
     qs = int(local_Configuracao['sit'])
 
-    with rasterio.open(raster_path, 'r+') as src:
+    with rasterio.open(raster_path, 'r') as src:
         # Ler a matriz de dados do raster
         data = src.read(1)
         inv_transform = ~src.transform
@@ -294,7 +294,7 @@ def modificar_e_salvar_raster(raster_path, ponto, raio, limear, ht, hr, f, preci
         raster_path = raster_unido
 
     # Abrir o arquivo raster para leitura e escrita
-    with rasterio.open(raster_path, 'r+') as src:
+    with rasterio.open(raster_path, 'r') as src:
         # Ler a matriz de dados do raster
         data = src.read(1)
         inv_transform = ~src.transform
