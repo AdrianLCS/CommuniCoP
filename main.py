@@ -8,6 +8,7 @@ from matplotlib.colors import LinearSegmentedColormap
 import matplotlib.pyplot as plt
 import Modelos
 from PIL import Image
+import re
 
 # Váriaves Globais
 app = Flask(__name__)
@@ -54,17 +55,10 @@ radios = [radio1, radio2, radio3, radio4, radio5, radio6]
 
 def generate_raster_files(base_string):
     """
-    Essa função é usada para quando a predição  abrange uma região de mais de um modelo digital de um modelo digital de
-    terreno diferrente
-
-    Obtém uma lista de arquivos Raster com os Rasters em torno de um nome de Raster de entrada. Usada na função
-    unir_raster_3x3
-
-    ainda são necessários alguns testes
-
+    Gera uma lista de arquivos Raster de um grid 3x3 ao redor do arquivo base.
+    Os arquivos são ordenados de oeste para leste e de norte para sul.
+    Exemplo: topo-esquerdo (NW) até baixo-direito (SE)
     """
-    import re
-
     # Extrair a coordenada base da string
     match = re.search(r'([NS])(\d{2})([EW])(\d{3})', base_string)
     if not match:
@@ -75,29 +69,29 @@ def generate_raster_files(base_string):
     base_lon_dir = match.group(3)
     base_lon = int(match.group(4))
 
-    # Converter direções N/S e E/W para 1 ou -1
+    # Converter direções N/S e E/W para sinais
     lat_sign = 1 if base_lat_dir == 'N' else -1
     lon_sign = 1 if base_lon_dir == 'E' else -1
 
-    # Função auxiliar para gerar a direção correta
+    # Função auxiliar para gerar as letras de direção
     def get_lat_dir(lat):
         return 'N' if lat >= 0 else 'S'
 
     def get_lon_dir(lon):
         return 'E' if lon >= 0 else 'W'
 
-    # Gerar a lista de arquivos raster na ordem especificada
+    # Criar lista ordenada de rasters (de norte para sul, oeste para leste)
     raster_files = []
-    for lat_offset in range(-1, 2):
-        for lon_offset in range(-1, 2):
+    for lat_offset in [-1, 0, 1]:  # de norte para sul
+        for lon_offset in [1, 0, -1]:  # de oeste para leste
             lat = base_lat + lat_offset
             lon = base_lon + lon_offset
-            lat_dir = get_lat_dir(lat_sign * lat)
-            lon_dir = get_lon_dir(lon_sign * lon)
-            lat = abs(lat)
-            lon = abs(lon)
-            straux = f"{lat_dir}{lat:02d}{lon_dir}{lon:03d}.tif"
-            raster_files.append(os.path.join("Raster",straux))
+            lat_val = lat_sign * lat
+            lon_val = lon_sign * lon
+            lat_dir = get_lat_dir(lat_val)
+            lon_dir = get_lon_dir(lon_val)
+            straux = f"{lat_dir}{abs(lat):02d}{lon_dir}{abs(lon):03d}.tif"
+            raster_files.append(os.path.join("Raster", straux))
 
     return raster_files
 
@@ -201,7 +195,6 @@ def extrair_vet_area(raio, ponto, f, limear, unidade_distancia, precisao, local_
         dem0[i] = dem
         dsm0[i] = dsm
         landcover0[i] = landcover
-        print(i)
     return retas, d, dem0, dsm0, landcover0, distancia0
 
 
@@ -268,7 +261,7 @@ def modificar_e_salvar_raster(raster_path, ponto, raio, limear, ht, hr, f, preci
     pasta = raster_path[:-11] + 'modificado'
 
     #nome do raster modificado
-    file = '\A' + raster_path[-11:]
+    file = 'A' + raster_path[-11:]
     yt = 1
 
     #confiabilidade do modelo ITM
@@ -288,27 +281,28 @@ def modificar_e_salvar_raster(raster_path, ponto, raio, limear, ht, hr, f, preci
     # paramentros. Retorna as listas com vetores de perfila para cada azuimute
     retas, raio, dem0, dsm0, landcover0, distancia0 = extrair_vet_area(raio, ponto, f, limear, unidade_distancia,
                                                                        precisao, local_Configuracao)
+
     xy = min(x, 3600 - x, y, 3600 - y)
+    somar=0
     if xy * unidade_distancia <= raio:
         raster_unido = unir_raster_3x3(raster_path)
         raster_path = raster_unido
+        file = 'A' + raster_path[-15:]
+        somar=-26
 
     # Abrir o arquivo raster para leitura e escrita
     with rasterio.open(raster_path, 'r') as src:
         # Ler a matriz de dados do raster
         data = src.read(1)
         inv_transform = ~src.transform
-        transform = src.transform
         x, y = inv_transform * (ponto[0], ponto[1])
-
+        y=y+somar
 
 
         # Modificar o valor do ponto desejado
-        print('retas obtidas')
-        print('percorrendo raster')
         for linha in range(np.shape(data)[0]):
             for coluna in range(np.shape(data)[1]):
-                # muita atenão ao anlalizar como a o perfil é obtido em funão do azimute e do ponto que se está no raster
+                # muita atencão ao anlalizar como a o perfil é obtido em funão do azimute e do ponto que se está no raster
                 distyx = ((((linha - y) ** 2) + ((coluna - x) ** 2)) ** 0.5)
                 if (distyx * unidade_distancia > 200) and (distyx < ((raio / unidade_distancia) - 3)):
 
@@ -388,11 +382,12 @@ def modificar_e_salvar_raster(raster_path, ponto, raio, limear, ht, hr, f, preci
         meta = src.meta.copy()
 
     # Salvar o novo raster modificado com um nome diferente
-    with rasterio.open(pasta + file, 'w', **meta) as dst:
+    with rasterio.open(str(os.path.join(pasta, file)) , 'w', **meta) as dst:
         # Copiar os dados do raster original para o novo arquivo
         with rasterio.Env():
             dst.write(data, 1)
-    return pasta + file
+    return str(os.path.join(pasta, file))
+
 
 
 def criaimg(dem_file, nova_cobertura, cormin, cormax):
@@ -408,16 +403,18 @@ def criaimg(dem_file, nova_cobertura, cormin, cormax):
 
     # Configurar a figura e os eixos para o gráfico sem eixos e títulos
     plt.figure(figsize=(dem_data.shape[1] / 100, dem_data.shape[0] / 100), dpi=100)
-    plt.imshow(dem_data, cmap=cmap, vmax=cormax)
+    plt.imshow(dem_data, cmap=cmap, vmax=cormax, interpolation='nearest')
     plt.axis('off')
 
     # Salvar a imagem em um arquivo sem títulos, eixos e barra de cores
-    plt.savefig('Raster/modificado/' + nova_cobertura + ".png", format="png", bbox_inches='tight', pad_inches=0)
+    pasta = os.path.join('Raster', 'modificado')
+    arqivo = os.path.join(pasta, nova_cobertura + ".png")
+    print(dem_data.shape[1])
+    plt.savefig(arqivo, format="png", bbox_inches='tight', pad_inches=0)
 
     # Fechar a figura para liberar recursos
     plt.close()
-    return 'Raster/modificado/' + nova_cobertura + ".png"
-
+    return arqivo
 
 def carregamapa(caminho_completo, filename):
     """Essa função forma a camada de visualização de uma carta carregada pelo usuário sobre o mapa em função de uma
@@ -507,15 +504,16 @@ def obter_dados_do_raster(indice_atual, r, dem, dsm, landcover, d, distancia, ar
         with rasterio.open(caminho) as src:
             raster = src.read(1)
             inv_transform = ~src.transform
-            indice_atual_dem = indice_atual  # indica quem é o procimo ponto da reta
+            indice_atual_dem = indice_atual  # indica quem é o proximo ponto da reta
             for i in range(indice_atual, np.shape(r)[0]):
                 if (np.floor(r[i][0]) == np.floor(r[indice_atual_dem][0])) and (
                         np.floor(r[i][1]) == np.floor(r[indice_atual_dem][1])):
                     pixel_x1, pixel_y1 = inv_transform * (r[i][0], r[i][1])
                     dist = distancia * i
 
-                    if int(pixel_x1) == 3600 or int(pixel_y1) == 3600:  # confere se não é final do raster(evita erros)
+                    if int(pixel_x1) == 3600:# confere se não é final do raster(evita erros)
                         pixel_x1 = 3599
+                    if int(pixel_y1) == 3600:
                         pixel_y1 = 3599
                     alt_dem = raster[int(pixel_y1), int(pixel_x1)]  # adiciona o ponto
                     d[i] = dist # adiciona a distância no vetor disância
@@ -536,9 +534,10 @@ def obter_dados_do_raster(indice_atual, r, dem, dsm, landcover, d, distancia, ar
                         np.floor(r[i][1]) == np.floor(r[indice_atual_dsm][1])):
                     pixel_x1_dsm, pixel_y1_dsm = inv_transform_dsm * (r[i][0], r[i][1])
 
-                    if int(pixel_x1) == 3600 or int(pixel_y1) == 3600:
-                        pixel_x1 = 3599
-                        pixel_y1 = 3599
+                    if int(pixel_x1_dsm) == 3600:# confere se não é final do raster(evita erros)
+                        pixel_x1_dsm = 3599
+                    if int(pixel_y1_dsm) == 3600:
+                        pixel_y1_dsm = 3599
                     alt_dsm = raster_dsm[int(pixel_y1_dsm), int(pixel_x1_dsm)]
                     dsm[i] = alt_dsm
                     indice_atual_dsm = i
@@ -571,8 +570,8 @@ def obter_dados_do_raster(indice_atual, r, dem, dsm, landcover, d, distancia, ar
                             landcover[3 * i + 1] = raster_landcover[int(pixel_y2_landcover), int(pixel_x2_lancover)]
                             landcover[3 * i + 2] = raster_landcover[int(pixel_y2_landcover), int(pixel_x2_lancover)]
                         else:
-                            landcover[3 * i + 1] = raster_landcover[int(pixel_y2_landcover), int(pixel_x2_lancover)]
-                            landcover[3 * i + 2] = raster_landcover[int(pixel_y2_landcover), int(pixel_x2_lancover)]
+                            landcover[3 * i + 1] = raster_landcover[int(pixel_y1_landcover), int(pixel_x1_lancover)]
+                            landcover[3 * i + 2] = raster_landcover[int(pixel_y1_landcover), int(pixel_x1_lancover)]
                     indice_atual_land = i
                 else:
                     break
@@ -583,20 +582,26 @@ def obter_dados_do_raster(indice_atual, r, dem, dsm, landcover, d, distancia, ar
         with rasterio.open(caminho) as src:
             raster = src.read(1)
             inv_transform = ~src.transform
-            for i in range(np.shape(r)[0]):
-                if (np.floor(r[i][0]) == np.floor(r[indice_atual][0])) and (
-                        np.floor(r[i][1]) == np.floor(r[indice_atual][1])):
+            indice_atual_dem = indice_atual
+            for i in range(indice_atual, np.shape(r)[0]):
+                if (np.floor(r[i][0]) == np.floor(r[indice_atual_dem][0])) and (
+                        np.floor(r[i][1]) == np.floor(r[indice_atual_dem][1])):
                     pixel_x1, pixel_y1 = inv_transform * (r[i][0], r[i][1])
                     dist = distancia * i
 
-                    alt_dem = raster[int(pixel_y1), int(pixel_x1)]
-                    d[i] = dist
+                    if int(pixel_x1) == 3600:# confere se não é final do raster(evita erros)
+                        pixel_x1 = 3599
+                    if int(pixel_y1) == 3600:
+                        pixel_y1 = 3599
+                    alt_dem = raster[int(pixel_y1), int(pixel_x1)]  # adiciona o ponto
+                    d[i] = dist # adiciona a distância no vetor disância
                     dem[i] = alt_dem
-                    indice_atual = i
+                    indice_atual_dem = i
                 else:
-                    indice_atual = i
+                    indice_atual_dem = i
                     break
-        return dem, dsm, landcover, d, indice_atual
+        indice_atual = indice_atual_dem
+        return dem, dem, landcover, d, indice_atual
 
 
 def perfil(p1, p2, local_Configuracao, area=0):
@@ -975,91 +980,9 @@ def addfoliun(local_mapas, local_cobertura):
 
     for i in local_mapas:
         carregamapa(i[0], i[1]).add_to(folium_map)
-
     for i in local_cobertura:
+
         criamapa(i['raster'], i['img'], local_cobertura).add_to(folium_map)
-
-    """medido=[]
-    dadosmedido=[]
-    dadositm = []
-    dadosprop=[]
-    dadositms=[]
-    erro=[]
-    with open('C:\PythonFlask\PlanCom\\mtteste9.txt') as csvfile:
-        spamreader = np.genfromtxt(csvfile, delimiter=',')
-        cont = 0
-
-        for row in spamreader:
-            if cont != 0:
-                m = []
-                for i in row:
-                    m.append(i)
-                if m[12]<100:
-                    dadosmedido.append([m[3],m[2],m[12]])
-                    dadositm.append([m[3], m[2], m[10]])
-                    dadosprop.append([m[3], m[2], m[11]])
-                    dadositms.append([m[3], m[2], m[6]])
-                    medido.append([m[12], m[6],m[11],m[10]]) #medido.append(m[11] - m[12])  #
-                    erro.append([m[3], m[2], m[11] - m[12]])
-
-            cont += 1
-
-    #dicionario_cores={.1:'00FFFF',.2:'00FFCC',.3:'33CCCC',0.4:'669999',0.5:'996699',0.6:'CC3366',0.7:'FF3366',.8:'FF0033',0.9:'FF0000'}#'00FFFF','00FFCC','33CCCC','669999','996699', 'CC3366', 'FF3366','FF0033','FF0000'
-    #dicionario_cores = {.2: "blue", .5: "cyan", .6: "lime", .7: "yellow", 1: "red"}
-    #dicionario_cores = {.2: (0,0,255), .5: (0,102,127), .6: (0,255,0), .7: (127,127,0), 1: (255,0,0)}
-
-    mini=np.min(medido)
-    maxi=np.max(medido)
-
-    dadosmedido.append([50.2819, -81.6231, mini])
-    dadosmedido.append([50.2819, -81.6231, maxi])
-    dadositm.append([50.2819, 8.320198953, mini])
-    dadositm.append([50.2819, 8.320198953, maxi])
-    dadosprop.append([50.2819, 8.320198953, mini])
-    dadosprop.append([50.2819, 8.320198953, maxi])
-    dadositms.append([50.2819, 8.320198953, mini])
-    dadositms.append([50.2819, 8.320198953, maxi])
-    #erro.append([4.991688749, 8.320198953, 0])
-    dadositm=np.array(dadositm)
-    dadositms = np.array(dadositms)
-    dadosmedido = np.array(dadosmedido)
-    dadosprop = np.array(dadosprop)
-    erro2=[]
-    erro1=[]
-    for i in range(len(erro)):
-        if erro[i][2]>=0:
-            erro1.append(erro[i])
-        else:
-            erro[i][2]=-erro[i][2]
-            erro2.append(erro[i])
-    erro1.append([4.991688749, 8.320198953, 0])
-    erro2.append([4.991688749, 8.320198953, 0])
-
-    erro1 = np.array(erro1)
-    erro2 = np.array(erro2)
-    #indices=[0.2,0.5,0.6,0.7, 1]
-    dicionario_cores = {
-        0.3: 'blue',
-        0.4: '#0040FF',  # Intermediate blue
-        0.45:'#0080FF',  # Lighter blue
-        0.5: '#00BFFF',  # Cyan
-        0.55: '#00FFBF',  # Greenish-cyan
-        0.57: '#00FF80',  # Light green
-        0.6: '#80FF00',  # Lime green
-        0.7: 'yellow',  # Yellow-green
-        0.8: '#FFBF00',  # Orange
-        0.9: '#FF8000',  # Dark orange
-        1.0: 'red'
-    }
-    indices = [0.0,0.1, 0.2, 0.3, 0.4,0.5,0.6,0.7,0.8,0.9,1.0]
-    colormap=branca.colormap.LinearColormap(['blue','#0040FF', '#0080FF','#00BFFF','#00FFBF','#00FF80','#80FF00','yellow','#FFBF00','#FF8000','red'],index=indices)
-    colormap.scale(mini, maxi).add_to(folium_map)
-
-    HeatMap(data=dadosmedido, max_zoom=18,radius=15, name='medido',blur=1, gradient=dicionario_cores).add_to(folium_map)
-    HeatMap(data=dadositm, max_zoom=18, radius=15, name='itm-urb-veg',blur=1, gradient=dicionario_cores).add_to(folium_map)
-    HeatMap(data=dadosprop, max_zoom=18, radius=15, name='proprio',blur=1, gradient=dicionario_cores).add_to(folium_map)
-    HeatMap(data=dadositms, max_zoom=18, radius=15, name='itm',blur=1, gradient=dicionario_cores).add_to(folium_map)
-    HeatMap(data=erro1, max_zoom=18, radius=15, name='erro', blur=1, gradient=dicionario_cores).add_to(folium_map)"""
 
     folium_map.add_child(folium.LayerControl())
     return folium_map
@@ -1309,22 +1232,7 @@ def ptp():
 
             if modelo == 'Sim':
                 if visada:
-                    import shp_extrair
-                    import RayTracing
-                    p3 = tuple(p1)
-                    p4 = tuple(p2)
-                    print(p3)
-                    print(p4)
-                    shapefile_path = 'shapefiles\derivados\construcoes.shp'
-                    shapefile_path = shp_extrair.extrarir_do_rio(p3, p4)
-                    shapeData = RayTracing.load_shapefile(shapefile_path)
-                    sigma_conreto = conreto_c * ((f * 1e6) ** conreto_d)
-                    ray_paths, quinas, distancia_rays = RayTracing.trace_rays(shapeData, p3, p4, num_azimuths=1000,
-                                                                              max_reflections=3, max_diffractions=1)
-                    perda_raytracing = RayTracing.calcula_enlace(p3, p4, hg1, hg2, ray_paths, er_concreto, er_solo,
-                                                                 sigma_conreto, sigma_solo,f,num_azimuths=1000,polarizacao='V')
-                    perda_raytracing = round(perda_raytracing*10)/10
-
+                    perda_raytracing = "Não Calculado"
                 else:
                     perda_raytracing = "Não Calculado"
 
@@ -1642,7 +1550,6 @@ def addradio():
         local_radios.append(radio_adicionado)
         session['radios'] = local_radios
         return redirect(url_for('index_map'))
-        print(local_radios)
 
     return render_template('addradio.html')
 
@@ -1742,7 +1649,7 @@ def projetos():
 @app.route('/salv', methods=['GET', 'POST'])
 def salv():
     if request.form.get("nsalv"):
-        arquiv = os.path.join("planejamentos", str(request.form.get("nsalv"))+ ".pkl")
+        arquiv = os.path.join("planejamentos", str(request.form.get("nsalv")) + ".pkl")
         markers = session['markers']
         perdas = session['perdas']
         cobertura = session['cobertura']
@@ -1761,8 +1668,7 @@ def salv():
 @app.route('/carr', methods=['GET', 'POST'])
 def carr():
     if request.form.get("ncarr"):
-        arquiv = os.path.join("planejamentos", str(request.form.get("ncarr"))+ ".pkl")
-
+        arquiv = os.path.join("planejamentos", str(request.form.get("ncarr")) + ".pkl")
         with open(arquiv, 'rb') as arquivo:
             # Carregar as variáveis do arquivo
             data = pickle.load(arquivo)
@@ -1793,8 +1699,6 @@ def delete_marker():
     session['markers'] = local_markers
 
     return redirect(url_for('index_map'))
-
-
 
 if __name__ == '__main__':
     app.run(debug=True)
