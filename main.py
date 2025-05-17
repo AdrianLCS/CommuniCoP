@@ -1074,7 +1074,7 @@ def index_map():
 
     # Nome único por sessão/usuário
     map_file = f"map_{uuid.uuid4().hex}.html"
-    map_file_path = os.path.join("static", map_file)
+    map_file_path = os.path.join("templates", map_file)
     fol.save(map_file_path)
 
     return render_template('index1.html', map_file=map_file)
