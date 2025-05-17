@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import Modelos
 from PIL import Image
 import re
+import uuid
 
 # Váriaves Globais
 app = Flask(__name__)
@@ -283,7 +284,8 @@ def modificar_e_salvar_raster(raster_path, ponto, raio, limear, ht, hr, f, preci
                                                                        precisao, local_Configuracao)
 
     xy = min(x, 3600 - x, y, 3600 - y)
-    somar=0
+    somar=-1
+    somarx=-1
     if xy * unidade_distancia <= raio:
         raster_unido = unir_raster_3x3(raster_path)
         raster_path = raster_unido
@@ -297,6 +299,7 @@ def modificar_e_salvar_raster(raster_path, ponto, raio, limear, ht, hr, f, preci
         inv_transform = ~src.transform
         x, y = inv_transform * (ponto[0], ponto[1])
         y=y+somar
+        x=x+somar
 
 
         # Modificar o valor do ponto desejado
@@ -1069,8 +1072,9 @@ def index_map():
     for marker in session['markers']:
         folium.Marker([marker['lat'], marker['lon']]).add_to(fol)
 
-    map_file = 'map.html'
-    map_file_path = os.path.join("templates", map_file)
+    # Nome único por sessão/usuário
+    map_file = f"map_{uuid.uuid4().hex}.html"
+    map_file_path = os.path.join("static", map_file)
     fol.save(map_file_path)
 
     return render_template('index1.html', map_file=map_file)
