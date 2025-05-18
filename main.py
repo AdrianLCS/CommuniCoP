@@ -773,56 +773,6 @@ def ajuste(elevacao, distancia, hg1, hg2, dl1, dl2):
 
     return he1, he2, Dh
 
-
-"""def obter_dados_do_perfil(dem, dsm, distancia, ht, hr, Densidade_urbana):
-    #"A patrir de um perfil de terreno obtém os parametros do modelo ITM"
-    angulo = []
-    angulor = []
-    demr = dem[::-1]
-    d = distancia[-1]
-    hg1, hg2 = ht, hr
-    aref = np.arctan((-ht - dem[0] + hr + demr[0]) / d)
-    visada = 1  # 'visada# '
-    visadar = 1
-    indice_visada_r = 0
-    indice_visada = 0
-    dl1, dl2, teta1, teta2 = d, d, None, None
-    maxangulo = aref
-    maxangulor = -aref
-    df=distancia[-1]
-
-    for i in range(1, len(dem) - 1):
-        di=distancia[i]
-        #angulo.append(np.arctan(((dem[i]+(di*(df-di))/(2*8470000)) - (dem[0] + ht)) / di))
-        angulo.append(np.arctan((dem[i] - (dem[0] + ht)) / di))
-        if angulo[-1] > maxangulo:
-            teta1, dl1, idl1 = angulo[i - 1], distancia[i], i
-            visada = 0
-            indice_visada = idl1
-            maxangulo = max(angulo)
-
-    for i in range(1, len(demr) - 1):
-        di = distancia[i]
-        angulor.append(np.arctan((dem[i] - (demr[0] + hr)) / di))
-        if angulor[-1] > maxangulor:
-            teta2, dl2, idl2 = angulor[i - 1], distancia[i], i
-            visadar = 0
-            indice_visada_r = len(demr) - (i + 1)
-            maxangulor = max(angulor)
-    visada = max(visada, visadar)
-
-    he1, he2, Dh = ajuste(dem, distancia, hg1, hg2, dl1, dl2)
-    # h é a altura dos telaho m
-    # hb altura do transmissor, de 4 a 50- equivalente para cost25 sem visada
-    global Configuracao
-    if Configuracao["urb"]:
-        h_urb = abs((1 / Densidade_urbana) * (dsm[-1] + dsm[-2] - dem[-1] - dem[-2]) / 2)
-    else:
-        h_urb = 0
-
-    return d, hg1, hg2, dl1, dl2, teta1, teta2, he1, he2, Dh, h_urb, visada, indice_visada_r, indice_visada"""
-
-
 def obter_dados_do_perfil(dem, dsm, distancia, ht, hr, Densidade_urbana):
     """A patrir de um perfil de terreno obtém os parametros do modelo ITM"""
     angulo = []
@@ -890,8 +840,7 @@ def obter_vegeta_atravessada(f, indice, dem, landcover, dsm, hr, ht, distancia, 
                 for n in (0, 1, 2):
                     if landcover[3 * (indice + i) + n] == 10:
                         espesura = espesura + 10  # ( colocar 5, metade dos 10 m)
-        # if (espesura > 100):#(contar0 > 0) and (espesura > 100):
-        #    espesura = espesura / 2
+
 
 
     else:
@@ -920,8 +869,7 @@ def obter_vegeta_atravessada(f, indice, dem, landcover, dsm, hr, ht, distancia, 
         contar1 = 0
         contar2 = 0
 
-        # print(altur_da_cobertuta)
-        # print(landcover[3 * (indice - 1) + 1:])
+
         for i in range(len(los)):
 
             if los[i] < altur_da_cobertuta[i]:
@@ -931,10 +879,8 @@ def obter_vegeta_atravessada(f, indice, dem, landcover, dsm, hr, ht, distancia, 
                     if landcover[3 * (indice + i - 1) + n + 1] == 10:
                         espesura = espesura + 10  # ( colocar 5, metade dos 10 m)
 
-        # if (espesura > 100):#(contar1 > 0) and (espesura > 100):#
-        #    espesura = espesura / 2
         ref = espesura
-        # print(ref)
+
         altur_da_cobertuta2 = abs(dsm[:indice_d + 1] - dem[:indice_d + 1])
         # print(altur_da_cobertuta2)
         # print(landcover[:3 * len(los2)])
@@ -946,10 +892,6 @@ def obter_vegeta_atravessada(f, indice, dem, landcover, dsm, hr, ht, distancia, 
                     if landcover[3 * i + n] == 10:
                         espesura = espesura + 10  # ( colocar 5, metade dos 10 m)
 
-        # if (espesura-ref > 100):#(contar2 > 0) and (espesura-ref > 100):
-        #    espesura = ref + (espesura - ref) / 2
-
-        # print(espesura)
     return 0.5 * espesura  # considerando 40% da area coberta com vegetação elevada. a documentação dos dados estabelec 10% ou mais
 
 
