@@ -299,7 +299,7 @@ def modificar_e_salvar_raster(raster_path, ponto, raio, limear, ht, hr, f, preci
         inv_transform = ~src.transform
         x, y = inv_transform * (ponto[0], ponto[1])
         y=y+somar
-        x=x+somar
+        x=x+somarx
 
 
         # Modificar o valor do ponto desejado
