@@ -171,8 +171,50 @@ def allowed_file(filename):
     """Verifica se o arquivo carregado é compatível"""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+def gerar_paths_alternativos(caminho_raster):
+    """
+    Recebe o caminho de um arquivo na pasta 'Raster' e retorna
+    os caminhos correspondentes nas pastas 'DSM' e 'LandCover'.
+    O nome do arquivo na pasta LandCover é ajustado para a coordenada mais ao sul e mais a oeste,
+    com valores múltiplos de 3.
+    """
+    # Extrai o nome do arquivo (ex: S04W051.tif)
+    nome_arquivo = os.path.basename(caminho_raster)
 
-def extrair_vet_area(raio, ponto, f, limear, unidade_distancia, precisao, local_Configuracao):
+    # Expressão regular para extrair coordenadas
+    match = re.match(r'^([NS])(\d{2})([EW])(\d{3})\.tif$', nome_arquivo)
+    if not match:
+        raise ValueError("Nome do arquivo fora do padrão esperado (ex: S04W051.tif)")
+
+    lat_hem, lat_val, lon_hem, lon_val = match.groups()
+    lat_val = int(lat_val)
+    lon_val = int(lon_val)
+
+    # Ajuste de latitude (mais ao sul, múltiplo de 3)
+    if lat_hem == 'N':
+        lat_val_ajustado = (lat_val // 3) * 3
+    else:  # 'S' — mais ao sul significa número maior
+        lat_val_ajustado = ((lat_val + 2) // 3) * 3
+
+    # Ajuste de longitude (mais a oeste, múltiplo de 3)
+    if lon_hem == 'E':
+        lon_val_ajustado = (lon_val // 3) * 3
+    else:  # 'W' — mais a oeste significa número maior
+        lon_val_ajustado = ((lon_val + 2) // 3) * 3
+
+    # Constrói novo nome para LandCover
+    nome_landcover = f"{lat_hem}{lat_val_ajustado:02d}{lon_hem}{lon_val_ajustado:03d}.tif"
+
+    # Gera caminhos finais
+    caminho_dsm = os.path.join("dsm", nome_arquivo)
+    caminho_landcover = os.path.join("LandCover", nome_landcover)
+
+    return caminho_dsm, caminho_landcover
+
+
+
+
+def extrair_vet_area(raio, ponto, f, limear, unidade_distancia, precisao, local_Configuracao, parametro_unido, caminhos):
     """Essa funão é usada na predição de área. Ela gera os arrays que são perfis de terreno superfície e landcover
      em intervalos azimutais dado pela Váriavel Configuracao"""
 
@@ -184,28 +226,67 @@ def extrair_vet_area(raio, ponto, f, limear, unidade_distancia, precisao, local_
     retas = []
     dem0, dsm0, landcover0, distancia0 = np.zeros((qtd_retas, qtd_pontos)), np.zeros((qtd_retas, qtd_pontos)), np.zeros(
         (qtd_retas, 3 * (qtd_pontos - 1) + 1)), np.zeros((qtd_retas, qtd_pontos))
-    caminho, caminho_dsm, caminho_landcover = obter_raster(ponto, ponto)
-    with rasterio.open(caminho) as src_p1_dem, rasterio.open(caminho_dsm) as src_p1_dsm, rasterio.open(caminho_landcover) as src_p1_landcover:
-        raster_p1 = src_p1_dem.read(1)
-        raster_p1_dsm = src_p1_dsm.read(1)
-        raster_p1_landcover = src_p1_landcover.read(1)
-        inv_transform = ~src_p1_dem.transform
-        inv_transform_dsm = ~src_p1_dsm.transform
-        inv_transform_landcover = ~src_p1_landcover.transform
-        transform_p1_dem = src_p1_dem.transform
 
-        for i in range(int(360 * precisao)):
-            vet = np.array([np.cos(i * 2 * np.pi / qtd_retas), np.sin(
-                i * 2 * np.pi / qtd_retas)])  # roda no sentido positivo trigonométrio de 2 em 2 graus
-            pf = np.array(ponto) + vet * (
-                    d / unidade_distancia) * (1 / 3600)
-            r, distancia = reta(ponto, pf, transform_p1_dem[0])
-            dem, dsm, landcover, distancia, r = perfil_area(local_Configuracao, raster_p1,  raster_p1_dsm,  raster_p1_landcover, caminho, r, distancia, inv_transform, inv_transform_dsm, inv_transform_landcover, area=1)#perfil(ponto, pf, local_Configuracao, 1)
-            distancia0[i] = distancia
-            retas.append(r)
-            dem0[i] = dem
-            dsm0[i] = dsm
-            landcover0[i] = landcover
+    if parametro_unido == 0:
+        caminho_p1, caminho_dsm, caminho_landcover = obter_raster(ponto, ponto)
+        with rasterio.open(caminho_p1) as src_p1_dem, rasterio.open(caminho_dsm) as src_p1_dsm, rasterio.open(caminho_landcover) as src_p1_landcover:
+            raster_p1_nd = src_p1_dem.read(1)
+            raster_p1_dsm_nd = src_p1_dsm.read(1)
+            raster_p1_landcover_nd = src_p1_landcover.read(1)
+            inv_transform_nd = ~src_p1_dem.transform
+            inv_transform_dsm_nd = ~src_p1_dsm.transform
+            inv_transform_landcover_nd = ~src_p1_landcover.transform
+            transform_p1_dem = src_p1_dem.transform
+
+            raster_p1={caminho_p1: raster_p1_nd}
+            raster_p1_dsm={caminho_p1: raster_p1_dsm_nd}
+            raster_p1_landcover={caminho_p1: raster_p1_landcover_nd}
+            inv_transform = {caminho_p1: inv_transform_nd}
+            inv_transform_dsm = {caminho_p1: inv_transform_dsm_nd}
+            inv_transform_landcover = {caminho_p1: inv_transform_landcover_nd}
+    else:
+        raster_p1 = {}
+        raster_p1_dsm = {}
+        raster_p1_landcover = {}
+        inv_transform = {}
+        inv_transform_dsm = {}
+        inv_transform_landcover = {}
+        for i in range(len(caminhos)):
+            dema=caminhos[i]
+            dsma, landcovera = gerar_paths_alternativos(caminhos[i])
+            with rasterio.open(dema) as src_p1_dem, rasterio.open(dsma) as src_p1_dsm, rasterio.open(landcovera) as src_p1_landcover:
+                raster_p1_nd = src_p1_dem.read(1)
+                raster_p1_dsm_nd = src_p1_dsm.read(1)
+                raster_p1_landcover_nd = src_p1_landcover.read(1)
+                inv_transform_nd = ~src_p1_dem.transform
+                inv_transform_dsm_nd = ~src_p1_dsm.transform
+                inv_transform_landcover_nd = ~src_p1_landcover.transform
+                transform_p1_dem = src_p1_dem.transform
+
+                raster_p1[dema] = raster_p1_nd
+                raster_p1_dsm[dema] = raster_p1_dsm_nd
+                raster_p1_landcover[dema] = raster_p1_landcover_nd
+                inv_transform[dema] = inv_transform_nd
+                inv_transform_dsm[dema] = inv_transform_dsm_nd
+                inv_transform_landcover[dema] = inv_transform_landcover_nd
+
+    for i in range(int(360 * precisao)):
+        print(i)
+        vet = np.array([np.cos(i * 2 * np.pi / qtd_retas), np.sin(
+            i * 2 * np.pi / qtd_retas)])  # roda no sentido positivo trigonométrio de 2 em 2 graus
+        pf = np.array(ponto) + vet * (
+                d / unidade_distancia) * (1 / 3600)
+        r, distancia = reta(ponto, pf, transform_p1_dem[0])
+        dem, dsm, landcover, distancia, r = perfil_area(local_Configuracao, raster_p1, raster_p1_dsm,
+                                                        raster_p1_landcover, r, distancia, inv_transform,
+                                                        inv_transform_dsm, inv_transform_landcover,
+                                                        area=1)
+        distancia0[i] = distancia
+        retas.append(r)
+        dem0[i] = dem
+        dsm0[i] = dsm
+        landcover0[i] = landcover
+
     return retas, d, dem0, dsm0, landcover0, distancia0
 
 
@@ -290,17 +371,22 @@ def modificar_e_salvar_raster(raster_path, ponto, raio, limear, ht, hr, f, preci
 
     # essa funão recebe o ponto transmissor a distancia maxima(raio) que se deseja fazer a predição e outros
     # paramentros. Retorna as listas com vetores de perfila para cada azuimute
-    retas, raio, dem0, dsm0, landcover0, distancia0 = extrair_vet_area(raio, ponto, f, limear, unidade_distancia,
-                                                                       precisao, local_Configuracao)
 
     xy = min(x, 3600 - x, y, 3600 - y)
     somar=-1
     somarx=-1
+    parametro_unido = 0
+    caminhos=0
     if xy * unidade_distancia <= raio:
+        parametro_unido = 1
         raster_unido = unir_raster_3x3(raster_path)
+        caminhos = generate_raster_files(raster_path)
         raster_path = raster_unido
         file = 'A' + raster_path[-15:]
         somar=-26
+
+    retas, raio, dem0, dsm0, landcover0, distancia0 = extrair_vet_area(raio, ponto, f, limear, unidade_distancia,
+                                                                       precisao, local_Configuracao, parametro_unido, caminhos)
 
     # Abrir o arquivo raster para leitura e escrita
     with rasterio.open(raster_path, 'r') as src:
@@ -639,211 +725,111 @@ def perfil(p1, p2, local_Configuracao, area=0):
 
 
 
-def obter_dados_do_raster_area(indice_atual, r, dem, dsm, landcover, d, distancia, area, local_Configuracao,raster_p1, raster_p1_dsm, raster_p1_landcover, caminho_p1, inv_transform_p1,inv_transform_p1_dsm,inv_transform_p1_landcover):
+def obter_dados_do_raster_area(indice_atual, r, dem, dsm, landcover, d, distancia, area, local_Configuracao,raster_p1_d, raster_p1_dsm_d, raster_p1_landcover_d, inv_transform_p1_d,inv_transform_p1_dsm_d,inv_transform_p1_landcover_d):
     """Essa função extrai o perfil de elevação superfífice e land Cover ao longo do caminho entre dois pontos dentro
     de um mesmo arquivo Raster. """
     caminho, caminho_dsm, caminho_landcover = obter_raster(r[indice_atual], r[indice_atual])
-    if caminho_p1 == caminho:
-        if (local_Configuracao["urb"] or local_Configuracao["veg"]) or not area:
-            #extrai do Modelo digital do terreno o valor de altura do proximo ponto da reta e adiciona ao vetor perfil do terreno
-            indice_atual_dem = indice_atual  # indica quem é o proximo ponto da reta
-            for i in range(indice_atual, np.shape(r)[0]):
-                if (np.floor(r[i][0]) == np.floor(r[indice_atual_dem][0])) and (
-                        np.floor(r[i][1]) == np.floor(r[indice_atual_dem][1])):
-                    pixel_x1, pixel_y1 = inv_transform_p1 * (r[i][0], r[i][1])
-                    dist = distancia * i
+    raster_p1=raster_p1_d[caminho]
+    raster_p1_dsm=raster_p1_dsm_d[caminho]
+    raster_p1_landcover=raster_p1_landcover_d[caminho]
+    inv_transform_p1=inv_transform_p1_d[caminho]
+    inv_transform_p1_dsm=inv_transform_p1_dsm_d[caminho]
+    inv_transform_p1_landcover=inv_transform_p1_landcover_d[caminho]
 
-                    if int(pixel_x1) == 3600:  # confere se não é final do raster(evita erros)
-                        pixel_x1 = 3599
-                    if int(pixel_y1) == 3600:
-                        pixel_y1 = 3599
-                    alt_dem = raster_p1[int(pixel_y1), int(pixel_x1)]  # adiciona o ponto
-                    d[i] = dist  # adiciona a distância no vetor disância
-                    dem[i] = alt_dem
-                    indice_atual_dem = i
-                else:
-                    indice_atual_dem = i
-                    break
+    if (local_Configuracao["urb"] or local_Configuracao["veg"]) or not area:
+        # extrai do Modelo digital do terreno o valor de altura do proximo ponto da reta e adiciona ao vetor perfil do terreno
+        indice_atual_dem = indice_atual  # indica quem é o proximo ponto da reta
+        for i in range(indice_atual, np.shape(r)[0]):
+            if (np.floor(r[i][0]) == np.floor(r[indice_atual_dem][0])) and (
+                    np.floor(r[i][1]) == np.floor(r[indice_atual_dem][1])):
+                pixel_x1, pixel_y1 = inv_transform_p1 * (r[i][0], r[i][1])
+                dist = distancia * i
 
-            # extrai do Modelo digital de superfície o valor de altura do proximo ponto da reta e adiciona ao vetor perfil do terreno
+                if int(pixel_x1) == 3600:  # confere se não é final do raster(evita erros)
+                    pixel_x1 = 3599
+                if int(pixel_y1) == 3600:
+                    pixel_y1 = 3599
+                alt_dem = raster_p1[int(pixel_y1), int(pixel_x1)]  # adiciona o ponto
+                d[i] = dist  # adiciona a distância no vetor disância
+                dem[i] = alt_dem
+                indice_atual_dem = i
+            else:
+                indice_atual_dem = i
+                break
 
-            indice_atual_dsm = indice_atual
-            for i in range(indice_atual, np.shape(r)[0]):
-                if (np.floor(r[i][0]) == np.floor(r[indice_atual_dsm][0])) and (
-                        np.floor(r[i][1]) == np.floor(r[indice_atual_dsm][1])):
-                    pixel_x1_dsm, pixel_y1_dsm = inv_transform_p1_dsm * (r[i][0], r[i][1])
+        # extrai do Modelo digital de superfície o valor de altura do proximo ponto da reta e adiciona ao vetor perfil do terreno
 
-                    if int(pixel_x1_dsm) == 3600:  # confere se não é final do raster(evita erros)
-                        pixel_x1_dsm = 3599
-                    if int(pixel_y1_dsm) == 3600:
-                        pixel_y1_dsm = 3599
-                    alt_dsm = raster_p1_dsm[int(pixel_y1_dsm), int(pixel_x1_dsm)]
-                    dsm[i] = alt_dsm
-                    indice_atual_dsm = i
-                else:
-                    break
-            # extrai do Modelo digital de superfície o valor de altura do proximo ponto da reta e adiciona ao vetor perfil do terreno
-            #é mais complicado pois a precisão desse arquivo é 3x a do DSM e do DTM
-            indice_atual_land = indice_atual
-            for i in range(indice_atual, np.shape(r)[0]):
-                if (np.floor(r[i][0]) == np.floor(r[indice_atual_land][0])) and (
-                        np.floor(r[i][1]) == np.floor(r[indice_atual_land][1])):
-                    pixel_x1_lancover, pixel_y1_landcover = inv_transform_p1_landcover * (r[i][0], r[i][1])
-                    landcover[3 * i] = raster_p1_landcover[int(pixel_y1_landcover), int(pixel_x1_lancover)]
-                    if i < np.shape(r)[0] - 1:
-                        lonpasso = (r[i + 1][0] - r[i][0]) / 3
-                        latpasso = (r[i + 1][1] - r[i][1]) / 3
-                        pixel_x2_lancover, pixel_y2_landcover = inv_transform_p1_landcover * (
-                            r[i][0] + lonpasso, r[i][1] + latpasso)
-                        pixel_x3_lancover, pixel_y3_landcover = inv_transform_p1_landcover * (
-                            r[i][0] + 2 * lonpasso, r[i][1] + 2 * latpasso)
-                        if (np.floor(r[i][0] + 2 * lonpasso) == np.floor(r[indice_atual_land][0])) and (
-                                np.floor(r[i][1] + 2 * latpasso) == np.floor(r[indice_atual_land][1])):
-                            landcover[3 * i + 1] = raster_p1_landcover[int(pixel_y2_landcover), int(pixel_x2_lancover)]
-                            landcover[3 * i + 2] = raster_p1_landcover[int(pixel_y3_landcover), int(pixel_x3_lancover)]
-                        elif (np.floor(r[i][0] + lonpasso) == np.floor(r[indice_atual_land][0])) and (
-                                np.floor(r[i][1] + latpasso) == np.floor(r[indice_atual_land][1])):
-                            landcover[3 * i + 1] = raster_p1_landcover[int(pixel_y2_landcover), int(pixel_x2_lancover)]
-                            landcover[3 * i + 2] = raster_p1_landcover[int(pixel_y2_landcover), int(pixel_x2_lancover)]
-                        else:
-                            landcover[3 * i + 1] = raster_p1_landcover[int(pixel_y1_landcover), int(pixel_x1_lancover)]
-                            landcover[3 * i + 2] = raster_p1_landcover[int(pixel_y1_landcover), int(pixel_x1_lancover)]
-                    indice_atual_land = i
-                else:
-                    break
-            indice_atual = indice_atual_dem
-            return dem, dsm, landcover, d, indice_atual
-        else:
+        indice_atual_dsm = indice_atual
+        for i in range(indice_atual, np.shape(r)[0]):
+            if (np.floor(r[i][0]) == np.floor(r[indice_atual_dsm][0])) and (
+                    np.floor(r[i][1]) == np.floor(r[indice_atual_dsm][1])):
+                pixel_x1_dsm, pixel_y1_dsm = inv_transform_p1_dsm * (r[i][0], r[i][1])
 
-            indice_atual_dem = indice_atual
-            for i in range(indice_atual, np.shape(r)[0]):
-                if (np.floor(r[i][0]) == np.floor(r[indice_atual_dem][0])) and (
-                        np.floor(r[i][1]) == np.floor(r[indice_atual_dem][1])):
-                    pixel_x1, pixel_y1 = inv_transform_p1 * (r[i][0], r[i][1])
-                    dist = distancia * i
-
-                    if int(pixel_x1) == 3600:  # confere se não é final do raster(evita erros)
-                        pixel_x1 = 3599
-                    if int(pixel_y1) == 3600:
-                        pixel_y1 = 3599
-                    alt_dem = raster_p1[int(pixel_y1), int(pixel_x1)]  # adiciona o ponto
-                    d[i] = dist  # adiciona a distância no vetor disância
-                    dem[i] = alt_dem
-                    indice_atual_dem = i
-                else:
-                    indice_atual_dem = i
-                    break
-            indice_atual = indice_atual_dem
-            return dem, dem, landcover, d, indice_atual
+                if int(pixel_x1_dsm) == 3600:  # confere se não é final do raster(evita erros)
+                    pixel_x1_dsm = 3599
+                if int(pixel_y1_dsm) == 3600:
+                    pixel_y1_dsm = 3599
+                alt_dsm = raster_p1_dsm[int(pixel_y1_dsm), int(pixel_x1_dsm)]
+                dsm[i] = alt_dsm
+                indice_atual_dsm = i
+            else:
+                break
+        # extrai do Modelo digital de superfície o valor de altura do proximo ponto da reta e adiciona ao vetor perfil do terreno
+        # é mais complicado pois a precisão desse arquivo é 3x a do DSM e do DTM
+        indice_atual_land = indice_atual
+        for i in range(indice_atual, np.shape(r)[0]):
+            if (np.floor(r[i][0]) == np.floor(r[indice_atual_land][0])) and (
+                    np.floor(r[i][1]) == np.floor(r[indice_atual_land][1])):
+                pixel_x1_lancover, pixel_y1_landcover = inv_transform_p1_landcover * (r[i][0], r[i][1])
+                landcover[3 * i] = raster_p1_landcover[int(pixel_y1_landcover), int(pixel_x1_lancover)]
+                if i < np.shape(r)[0] - 1:
+                    lonpasso = (r[i + 1][0] - r[i][0]) / 3
+                    latpasso = (r[i + 1][1] - r[i][1]) / 3
+                    pixel_x2_lancover, pixel_y2_landcover = inv_transform_p1_landcover * (
+                        r[i][0] + lonpasso, r[i][1] + latpasso)
+                    pixel_x3_lancover, pixel_y3_landcover = inv_transform_p1_landcover * (
+                        r[i][0] + 2 * lonpasso, r[i][1] + 2 * latpasso)
+                    if (np.floor(r[i][0] + 2 * lonpasso) == np.floor(r[indice_atual_land][0])) and (
+                            np.floor(r[i][1] + 2 * latpasso) == np.floor(r[indice_atual_land][1])):
+                        landcover[3 * i + 1] = raster_p1_landcover[int(pixel_y2_landcover), int(pixel_x2_lancover)]
+                        landcover[3 * i + 2] = raster_p1_landcover[int(pixel_y3_landcover), int(pixel_x3_lancover)]
+                    elif (np.floor(r[i][0] + lonpasso) == np.floor(r[indice_atual_land][0])) and (
+                            np.floor(r[i][1] + latpasso) == np.floor(r[indice_atual_land][1])):
+                        landcover[3 * i + 1] = raster_p1_landcover[int(pixel_y2_landcover), int(pixel_x2_lancover)]
+                        landcover[3 * i + 2] = raster_p1_landcover[int(pixel_y2_landcover), int(pixel_x2_lancover)]
+                    else:
+                        landcover[3 * i + 1] = raster_p1_landcover[int(pixel_y1_landcover), int(pixel_x1_lancover)]
+                        landcover[3 * i + 2] = raster_p1_landcover[int(pixel_y1_landcover), int(pixel_x1_lancover)]
+                indice_atual_land = i
+            else:
+                break
+        indice_atual = indice_atual_dem
+        return dem, dsm, landcover, d, indice_atual
     else:
-        if (local_Configuracao["urb"] or local_Configuracao["veg"]) or not area:
+        indice_atual_dem = indice_atual
+        for i in range(indice_atual, np.shape(r)[0]):
+            if (np.floor(r[i][0]) == np.floor(r[indice_atual_dem][0])) and (
+                    np.floor(r[i][1]) == np.floor(r[indice_atual_dem][1])):
+                pixel_x1, pixel_y1 = inv_transform_p1 * (r[i][0], r[i][1])
+                dist = distancia * i
 
-            # extrai do Modelo digital do terreno o valor de altura do proximo ponto da reta e adiciona ao vetor perfil do terreno
-            with rasterio.open(caminho) as src:
-                raster = src.read(1)
-                inv_transform = ~src.transform
-                indice_atual_dem = indice_atual  # indica quem é o proximo ponto da reta
-                for i in range(indice_atual, np.shape(r)[0]):
-                    if (np.floor(r[i][0]) == np.floor(r[indice_atual_dem][0])) and (
-                            np.floor(r[i][1]) == np.floor(r[indice_atual_dem][1])):
-                        pixel_x1, pixel_y1 = inv_transform * (r[i][0], r[i][1])
-                        dist = distancia * i
-
-                        if int(pixel_x1) == 3600:  # confere se não é final do raster(evita erros)
-                            pixel_x1 = 3599
-                        if int(pixel_y1) == 3600:
-                            pixel_y1 = 3599
-                        alt_dem = raster[int(pixel_y1), int(pixel_x1)]  # adiciona o ponto
-                        d[i] = dist  # adiciona a distância no vetor disância
-                        dem[i] = alt_dem
-                        indice_atual_dem = i
-                    else:
-                        indice_atual_dem = i
-                        break
-
-            # extrai do Modelo digital de superfície o valor de altura do proximo ponto da reta e adiciona ao vetor perfil do terreno
-            with rasterio.open(caminho_dsm) as src_dsm:
-                raster_dsm = src_dsm.read(1)
-                inv_transform_dsm = ~src_dsm.transform
-
-                indice_atual_dsm = indice_atual
-                for i in range(indice_atual, np.shape(r)[0]):
-                    if (np.floor(r[i][0]) == np.floor(r[indice_atual_dsm][0])) and (
-                            np.floor(r[i][1]) == np.floor(r[indice_atual_dsm][1])):
-                        pixel_x1_dsm, pixel_y1_dsm = inv_transform_dsm * (r[i][0], r[i][1])
-
-                        if int(pixel_x1_dsm) == 3600:  # confere se não é final do raster(evita erros)
-                            pixel_x1_dsm = 3599
-                        if int(pixel_y1_dsm) == 3600:
-                            pixel_y1_dsm = 3599
-                        alt_dsm = raster_dsm[int(pixel_y1_dsm), int(pixel_x1_dsm)]
-                        dsm[i] = alt_dsm
-                        indice_atual_dsm = i
-                    else:
-                        break
-            # extrai do Modelo digital de superfície o valor de altura do proximo ponto da reta e adiciona ao vetor perfil do terreno
-            # é mais complicado pois a precisão desse arquivo é 3x a do DSM e do DTM
-            with rasterio.open(caminho_landcover) as src_landcover:
-                raster_landcover = src_landcover.read(1)
-                inv_transform_landcover = ~src_landcover.transform
-                indice_atual_land = indice_atual
-                for i in range(indice_atual, np.shape(r)[0]):
-                    if (np.floor(r[i][0]) == np.floor(r[indice_atual_land][0])) and (
-                            np.floor(r[i][1]) == np.floor(r[indice_atual_land][1])):
-                        pixel_x1_lancover, pixel_y1_landcover = inv_transform_landcover * (r[i][0], r[i][1])
-                        landcover[3 * i] = raster_landcover[int(pixel_y1_landcover), int(pixel_x1_lancover)]
-                        if i < np.shape(r)[0] - 1:
-                            lonpasso = (r[i + 1][0] - r[i][0]) / 3
-                            latpasso = (r[i + 1][1] - r[i][1]) / 3
-                            pixel_x2_lancover, pixel_y2_landcover = inv_transform_landcover * (
-                                r[i][0] + lonpasso, r[i][1] + latpasso)
-                            pixel_x3_lancover, pixel_y3_landcover = inv_transform_landcover * (
-                                r[i][0] + 2 * lonpasso, r[i][1] + 2 * latpasso)
-                            if (np.floor(r[i][0] + 2 * lonpasso) == np.floor(r[indice_atual_land][0])) and (
-                                    np.floor(r[i][1] + 2 * latpasso) == np.floor(r[indice_atual_land][1])):
-                                landcover[3 * i + 1] = raster_landcover[int(pixel_y2_landcover), int(pixel_x2_lancover)]
-                                landcover[3 * i + 2] = raster_landcover[int(pixel_y3_landcover), int(pixel_x3_lancover)]
-                            elif (np.floor(r[i][0] + lonpasso) == np.floor(r[indice_atual_land][0])) and (
-                                    np.floor(r[i][1] + latpasso) == np.floor(r[indice_atual_land][1])):
-                                landcover[3 * i + 1] = raster_landcover[int(pixel_y2_landcover), int(pixel_x2_lancover)]
-                                landcover[3 * i + 2] = raster_landcover[int(pixel_y2_landcover), int(pixel_x2_lancover)]
-                            else:
-                                landcover[3 * i + 1] = raster_landcover[int(pixel_y1_landcover), int(pixel_x1_lancover)]
-                                landcover[3 * i + 2] = raster_landcover[int(pixel_y1_landcover), int(pixel_x1_lancover)]
-                        indice_atual_land = i
-                    else:
-                        break
-            indice_atual = indice_atual_dem
-            return dem, dsm, landcover, d, indice_atual
-        else:
-
-            with rasterio.open(caminho) as src:
-                raster = src.read(1)
-                inv_transform = ~src.transform
-                indice_atual_dem = indice_atual
-                for i in range(indice_atual, np.shape(r)[0]):
-                    if (np.floor(r[i][0]) == np.floor(r[indice_atual_dem][0])) and (
-                            np.floor(r[i][1]) == np.floor(r[indice_atual_dem][1])):
-                        pixel_x1, pixel_y1 = inv_transform * (r[i][0], r[i][1])
-                        dist = distancia * i
-
-                        if int(pixel_x1) == 3600:  # confere se não é final do raster(evita erros)
-                            pixel_x1 = 3599
-                        if int(pixel_y1) == 3600:
-                            pixel_y1 = 3599
-                        alt_dem = raster[int(pixel_y1), int(pixel_x1)]  # adiciona o ponto
-                        d[i] = dist  # adiciona a distância no vetor disância
-                        dem[i] = alt_dem
-                        indice_atual_dem = i
-                    else:
-                        indice_atual_dem = i
-                        break
-            indice_atual = indice_atual_dem
-            return dem, dem, landcover, d, indice_atual
+                if int(pixel_x1) == 3600:  # confere se não é final do raster(evita erros)
+                    pixel_x1 = 3599
+                if int(pixel_y1) == 3600:
+                    pixel_y1 = 3599
+                alt_dem = raster_p1[int(pixel_y1), int(pixel_x1)]  # adiciona o ponto
+                d[i] = dist  # adiciona a distância no vetor disância
+                dem[i] = alt_dem
+                indice_atual_dem = i
+            else:
+                indice_atual_dem = i
+                break
+        indice_atual = indice_atual_dem
+        return dem, dem, landcover, d, indice_atual
 
 
 
-def perfil_area(local_Configuracao, raster_p1, raster_p1_dsm, raster_p1_landcover, caminho_p1, r, distancia, inv_transform, inv_transform_dsm,inv_transform_landcover, area=0):
+def perfil_area(local_Configuracao, raster_p1, raster_p1_dsm, raster_p1_landcover, r, distancia, inv_transform, inv_transform_dsm,inv_transform_landcover, area=0):
     """Essa função extrai o perfil de elevação superfífice e land Cover ao longo do caminho entre dois pontos que
     estejam em raster diferentes. Ela usa a função obter_dados_do_raster para obter o perfil ao longo do caminho em
     um cada um dos Rasters e une os perfis de Rasters diferentes
@@ -856,7 +842,7 @@ def perfil_area(local_Configuracao, raster_p1, raster_p1_dsm, raster_p1_landcove
     landcover = np.zeros(3 * (tamanho - 1) + 1, dtype=int)
     while indice_atual < np.shape(r)[0] - 1:
         dem, dsm, landcover, d, indice_atual = obter_dados_do_raster_area(indice_atual, r, dem, dsm, landcover, d, distancia,
-                                                                     area, local_Configuracao, raster_p1, raster_p1_dsm, raster_p1_landcover, caminho_p1, inv_transform,inv_transform_dsm,inv_transform_landcover)
+                                                                     area, local_Configuracao, raster_p1, raster_p1_dsm, raster_p1_landcover, inv_transform,inv_transform_dsm,inv_transform_landcover)
     return dem, dsm, landcover, d, r
 
 
