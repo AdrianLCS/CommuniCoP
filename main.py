@@ -206,7 +206,7 @@ def gerar_paths_alternativos(caminho_raster):
     nome_landcover = f"{lat_hem}{lat_val_ajustado:02d}{lon_hem}{lon_val_ajustado:03d}.tif"
 
     # Gera caminhos finais
-    caminho_dsm = os.path.join("DSM", nome_arquivo)
+    caminho_dsm = os.path.join("dsm", nome_arquivo)
     caminho_landcover = os.path.join("LandCover", nome_landcover)
 
     return caminho_dsm, caminho_landcover
