@@ -360,7 +360,6 @@ def modificar_e_salvar_raster(raster_path, ponto, raio, limear, ht, hr, f, preci
 
     with rasterio.open(raster_path, 'r') as src:
         # Ler a matriz de dados do raster
-        data = src.read(1)
         inv_transform = ~src.transform
         transform = src.transform
         x, y = inv_transform * (ponto[0], ponto[1])
