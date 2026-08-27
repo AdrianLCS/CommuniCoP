@@ -10,6 +10,10 @@ import Modelos
 from PIL import Image
 import re
 import uuid
+from pathlib import Path
+from concurrent.futures import ProcessPoolExecutor
+
+
 
 # Váriaves Globais
 app = Flask(__name__)
@@ -343,6 +347,179 @@ def parametros_difracao(distancia, dem, ht, hr):
     return dls, hs
 
 
+def _calcular_perda_area_para_distancia(indice_distancia, dem_reta, dsm_reta, landcover_reta, distancia_reta,
+                                        limear, ht, hr, f, largura_da_rua, local_Configuracao, yt, qs):
+    """Calcula a perda para uma única combinação de reta azimutal e distância radial.
+
+    O conteúdo desta função corresponde ao cálculo que antes era executado diretamente para cada pixel.
+    A separação permite calcular uma vez e reutilizar o resultado em todos os pixels equivalentes.
+    """
+    dem = dem_reta[:indice_distancia]
+    dsm = dsm_reta[:indice_distancia]
+    landcover = landcover_reta[:3 * (indice_distancia - 1) + 1]
+    distancia = distancia_reta[:indice_distancia]
+    Densidade_urbana = 0.9
+
+    d, hg1, hg2, dl1, dl2, teta1, teta2, he1, he2, Dh, h_urb, visada, indice_visada_r, indice_visada = obter_dados_do_perfil(
+        dem, dsm, distancia, ht, hr, Densidade_urbana)
+
+    min_alt = Modelos.min_alt_ikegami(f)
+    if h_urb > float(local_Configuracao["alt_max"]):
+        h_urb = float(local_Configuracao["alt_max"]) + min_alt
+    else:
+        h_urb = h_urb + min_alt
+
+    hmed = (dem[0] + dem[-1]) / 2
+
+    if local_Configuracao["urb"]:
+        if ((landcover[-1] == 50) or (landcover[-2] == 50) or (landcover[-3] == 50)) and (
+                h_urb > hg2 + min_alt):
+            urb = Modelos.ikegami_model(h_urb, hg2, f, w=float(largura_da_rua))
+        else:
+            urb = 0
+    else:
+        urb = 0
+
+    if local_Configuracao["veg"]:
+        espesura = obter_vegeta_atravessada(f, indice_visada_r, dem, landcover, dsm, hr, ht,
+                                            distancia, indice_visada)
+        vegetacao = Modelos.atenuaca_vegetacao_antiga_ITU(f, espesura, 0.55)
+    else:
+        vegetacao = 0
+
+    dls, hs = parametros_difracao(distancia, dsm, hg1, hg2)
+    espaco_livre = Modelos.friis_free_space_loss_db(f, d)
+    epstein = Modelos.modelo_epstein_peterson(dls, hs, f)
+    itm, variabilidade_situacao, At, dls_LR = Modelos.longLq_rice_model(hmed, f, hg1, hg2, he1,
+                                                                        he2,
+                                                                        d,
+                                                                        yt, qs, dl1,
+                                                                        dl2,
+                                                                        Dh, visada,
+                                                                        teta1, teta2,
+                                                                        polarizacao='v')
+
+    if (Dh > 100) and (d <= 0.7 * dls_LR) or (d < 2000) and local_Configuracao["urb"] and local_Configuracao["veg"]:
+        p = (espaco_livre + epstein + vegetacao + urb + variabilidade_situacao)
+    else:
+        p = (espaco_livre + itm + vegetacao + urb + variabilidade_situacao)
+
+    if p <= limear:
+        return p
+    return limear
+
+
+def _calcular_perdas_de_uma_reta(tarefa):
+    """Worker de processamento: calcula apenas as distâncias usadas de uma reta."""
+    (angulo2, indices_distancia, dem_reta, dsm_reta, landcover_reta, distancia_reta, limear, ht, hr, f,
+     largura_da_rua, local_Configuracao, yt, qs) = tarefa
+
+    perdas = np.empty(len(indices_distancia), dtype=float)
+    for posicao, indice_distancia in enumerate(indices_distancia):
+        perdas[posicao] = _calcular_perda_area_para_distancia(
+            int(indice_distancia), dem_reta, dsm_reta, landcover_reta, distancia_reta,
+            limear, ht, hr, f, largura_da_rua, local_Configuracao, yt, qs)
+
+    return angulo2, indices_distancia, perdas
+
+
+def _indices_polares_do_bloco(linha_inicial, linha_final, coluna_inicial, coluna_final,
+                              x, y, unidade_distancia, limite_raio, precisao):
+    """Converte um bloco do raster para os mesmos índices polares usados no laço original."""
+    linhas = np.arange(linha_inicial, linha_final, dtype=float)[:, np.newaxis]
+    colunas = np.arange(coluna_inicial, coluna_final, dtype=float)[np.newaxis, :]
+
+    diferenca_linhas = linhas - y
+    diferenca_colunas = colunas - x
+    distyx = ((diferenca_linhas ** 2) + (diferenca_colunas ** 2)) ** 0.5
+    mascara = (distyx * unidade_distancia > 200) & (distyx < limite_raio)
+
+    numerador = np.broadcast_to(y - linhas, distyx.shape)
+    denominador = np.broadcast_to(colunas - x, distyx.shape)
+    angulo = np.empty(distyx.shape, dtype=float)
+
+    coluna_diferente = denominador != 0
+    angulo[coluna_diferente] = np.arctan(
+        numerador[coluna_diferente] / denominador[coluna_diferente])
+
+    coluna_menor = coluna_diferente & (denominador < 0)
+    angulo[coluna_menor] = angulo[coluna_menor] + np.pi
+
+    mesma_coluna_acima = (~coluna_diferente) & (numerador > 0)
+    angulo[mesma_coluna_acima] = np.pi / 2
+    angulo[(~coluna_diferente) & (~mesma_coluna_acima)] = 3 * np.pi / 2
+
+    angulo[angulo < 0] = 2 * np.pi + angulo[angulo < 0]
+    indices_angulo = ((180 * angulo / np.pi) * precisao).astype(np.intp)
+    indices_distancia = distyx.astype(np.intp)
+
+    return mascara, indices_angulo, indices_distancia
+
+
+def _obter_combinacoes_necessarias(altura, largura, x, y, unidade_distancia, limite_raio,
+                                   precisao, qtd_retas, qtd_distancias, tamanho_bloco=64):
+    """Marca as combinações (reta, distância) que realmente correspondem a pixels válidos."""
+    combinacoes = np.zeros((qtd_retas, qtd_distancias), dtype=bool)
+
+    if limite_raio <= 0:
+        return combinacoes, (0, 0, 0, 0)
+
+    linha_inicial = max(0, int(np.floor(y - limite_raio)))
+    linha_final = min(altura, int(np.ceil(y + limite_raio)) + 1)
+    coluna_inicial = max(0, int(np.floor(x - limite_raio)))
+    coluna_final = min(largura, int(np.ceil(x + limite_raio)) + 1)
+
+    for inicio_bloco in range(linha_inicial, linha_final, tamanho_bloco):
+        fim_bloco = min(inicio_bloco + tamanho_bloco, linha_final)
+        mascara, indices_angulo, indices_distancia = _indices_polares_do_bloco(
+            inicio_bloco, fim_bloco, coluna_inicial, coluna_final,
+            x, y, unidade_distancia, limite_raio, precisao)
+
+        if np.any(mascara):
+            combinacoes[indices_angulo[mascara], indices_distancia[mascara]] = True
+
+    return combinacoes, (linha_inicial, linha_final, coluna_inicial, coluna_final)
+
+
+def _calcular_tabela_de_perdas(combinacoes, dem0, dsm0, landcover0, distancia0,
+                               limear, ht, hr, f, largura_da_rua, local_Configuracao, yt, qs):
+    """Calcula em paralelo uma tabela que funciona como cache de perdas polares."""
+    tabela_perdas = np.full(combinacoes.shape, limear, dtype=float)
+    tarefas = []
+
+    for angulo2 in range(combinacoes.shape[0]):
+        indices_distancia = np.flatnonzero(combinacoes[angulo2])
+        if len(indices_distancia) == 0:
+            continue
+        tarefas.append((angulo2, indices_distancia, dem0[angulo2], dsm0[angulo2],
+                        landcover0[angulo2], distancia0[angulo2],
+                        limear, ht, hr, f, largura_da_rua, local_Configuracao, yt, qs))
+
+    if not tarefas:
+        return tabela_perdas
+
+    qtd_processos = min(len(tarefas), max(1, (os.cpu_count() or 1) - 1))
+
+    if qtd_processos == 1:
+        resultados = map(_calcular_perdas_de_uma_reta, tarefas)
+        for angulo2, indices_distancia, perdas in resultados:
+            tabela_perdas[angulo2, indices_distancia] = perdas
+        return tabela_perdas
+
+    try:
+        with ProcessPoolExecutor(max_workers=qtd_processos) as executor:
+            resultados = executor.map(_calcular_perdas_de_uma_reta, tarefas, chunksize=1)
+            for angulo2, indices_distancia, perdas in resultados:
+                tabela_perdas[angulo2, indices_distancia] = perdas
+    except (OSError, RuntimeError):
+        # Mantém o funcionamento em ambientes que não permitem criar subprocessos.
+        for tarefa in tarefas:
+            angulo2, indices_distancia, perdas = _calcular_perdas_de_uma_reta(tarefa)
+            tabela_perdas[angulo2, indices_distancia] = perdas
+
+    return tabela_perdas
+
+
 def modificar_e_salvar_raster(raster_path, ponto, raio, limear, ht, hr, f, precisao, largura_da_rua,
                               local_Configuracao):
     """Essa é a principal função para gerar uma área de cobertura ela modifica um raster de DEM substituindo os
@@ -383,100 +560,44 @@ def modificar_e_salvar_raster(raster_path, ponto, raio, limear, ht, hr, f, preci
         file = 'A' + raster_path[-15:]
         somar=-26
 
-    retas, raio, dem0, dsm0, landcover0, distancia0 = extrair_vet_area(raio, ponto, f, limear, unidade_distancia,
-                                                                       precisao, local_Configuracao, parametro_unido, caminhos)
+    _retas, raio, dem0, dsm0, landcover0, distancia0 = extrair_vet_area(
+        raio, ponto, f, limear, unidade_distancia, precisao,
+        local_Configuracao, parametro_unido, caminhos)
 
-    # Abrir o arquivo raster para leitura e escrita
+    # Obtém apenas os metadados necessários. O resultado inteiro recebe o limiar,
+    # exatamente como ocorria no laço original para todos os pixels fora da área útil.
     with rasterio.open(raster_path, 'r') as src:
-        # Ler a matriz de dados do raster
-        data = src.read(1)
         inv_transform = ~src.transform
         x, y = inv_transform * (ponto[0], ponto[1])
-        y=y+somar
-        x=x+somarx
-
-
-        # Modificar o valor do ponto desejado
-        for linha in range(np.shape(data)[0]):
-            for coluna in range(np.shape(data)[1]):
-                # muita atencão ao anlalizar como a o perfil é obtido em funão do azimute e do ponto que se está no raster
-                distyx = ((((linha - y) ** 2) + ((coluna - x) ** 2)) ** 0.5)
-                if (distyx * unidade_distancia > 200) and (distyx < ((raio / unidade_distancia) - 3)):
-
-                    if coluna != x:
-                        if coluna > x:
-                            angulo = np.arctan((y - linha) / (coluna - x))
-                        else:
-                            angulo = np.arctan((y - linha) / (coluna - x)) + np.pi
-                    elif y > linha:
-                        angulo = np.pi / 2
-                    else:
-                        angulo = 3 * np.pi / 2
-
-                    if angulo < 0:
-                        angulo = 2 * np.pi + angulo
-                    angulo2 = int((180 * angulo / np.pi) * precisao)
-                    r = retas[angulo2][:int(distyx)]
-                    dem = dem0[angulo2][:int(distyx)]
-                    dsm = dsm0[angulo2][:int(distyx)]
-                    landcover = landcover0[angulo2][:3 * int(distyx - 1) + 1]
-                    distancia = distancia0[angulo2][:int(distyx)]
-                    Densidade_urbana = 0.9
-                    d, hg1, hg2, dl1, dl2, teta1, teta2, he1, he2, Dh, h_urb, visada, indice_visada_r, indice_visada = obter_dados_do_perfil(
-                        dem, dsm, distancia, ht, hr, Densidade_urbana)
-
-                    min_alt = Modelos.min_alt_ikegami(f)
-                    if h_urb > float(local_Configuracao["alt_max"]):
-                        h_urb = float(local_Configuracao["alt_max"]) + min_alt
-                    else:
-                        h_urb = h_urb + min_alt
-
-                    hmed = (dem[0] + dem[-1]) / 2
-
-                    if local_Configuracao["urb"]:
-                        if ((landcover[-1] == 50) or (landcover[-2] == 50) or (landcover[-3] == 50)) and (
-                                h_urb > hg2 + min_alt):
-                            urb = Modelos.ikegami_model(h_urb, hg2, f, w=float(largura_da_rua))
-                        else:
-                            urb = 0
-                    else:
-                        urb = 0
-
-                    if local_Configuracao["veg"]:
-                        espesura = obter_vegeta_atravessada(f, indice_visada_r, dem, landcover, dsm, hr, ht,
-                                                            distancia,
-                                                            indice_visada)
-                        vegetacao = Modelos.atenuaca_vegetacao_antiga_ITU(f, espesura, 0.55)
-                    else:
-                        vegetacao = 0
-
-                    dls, hs = parametros_difracao(distancia, dsm, hg1, hg2)
-                    espaco_livre = Modelos.friis_free_space_loss_db(f, d)
-                    epstein = Modelos.modelo_epstein_peterson(dls, hs, f)
-                    itm, variabilidade_situacao, At, dls_LR = Modelos.longLq_rice_model(hmed, f, hg1, hg2, he1,
-                                                                                        he2,
-                                                                                        d,
-                                                                                        yt, qs, dl1,
-                                                                                        dl2,
-                                                                                        Dh, visada,
-                                                                                        teta1, teta2,
-                                                                                        polarizacao='v')
-
-                    if (Dh > 100) and (d <= 0.7 * dls_LR) or (d < 2000) and local_Configuracao["urb"] and local_Configuracao["veg"]:
-                        p = (espaco_livre + epstein + vegetacao + urb + variabilidade_situacao)
-                    else:
-                        p = (espaco_livre + itm + vegetacao + urb + variabilidade_situacao)
-
-                    if p <= limear:
-                        data[linha][coluna] = p
-                    else:
-                        data[linha][coluna] = limear
-
-                else:
-                    data[linha][coluna] = limear
-
-        # Obter os metadados do raster original
+        y = y + somar
+        x = x + somarx
+        data = np.full((src.height, src.width), limear, dtype=src.dtypes[0])
         meta = src.meta.copy()
+
+    limite_raio = (raio / unidade_distancia) - 3
+    combinacoes, limites = _obter_combinacoes_necessarias(
+        data.shape[0], data.shape[1], x, y, unidade_distancia, limite_raio,
+        precisao, dem0.shape[0], dem0.shape[1])
+
+    tabela_perdas = _calcular_tabela_de_perdas(
+        combinacoes, dem0, dsm0, landcover0, distancia0,
+        limear, ht, hr, f, largura_da_rua, local_Configuracao, yt, qs)
+
+    linha_inicial, linha_final, coluna_inicial, coluna_final = limites
+    tamanho_bloco = 64
+
+    # Preenche somente a janela que contém o raio. A conversão para os índices
+    # polares usa as mesmas expressões de distância, ângulo e truncamento do código original.
+    for inicio_bloco in range(linha_inicial, linha_final, tamanho_bloco):
+        fim_bloco = min(inicio_bloco + tamanho_bloco, linha_final)
+        mascara, indices_angulo, indices_distancia = _indices_polares_do_bloco(
+            inicio_bloco, fim_bloco, coluna_inicial, coluna_final,
+            x, y, unidade_distancia, limite_raio, precisao)
+
+        if np.any(mascara):
+            bloco = data[inicio_bloco:fim_bloco, coluna_inicial:coluna_final]
+            bloco[mascara] = tabela_perdas[
+                indices_angulo[mascara], indices_distancia[mascara]]
 
     # Salvar o novo raster modificado com um nome diferente
     with rasterio.open(str(os.path.join(pasta, file)) , 'w', **meta) as dst:
@@ -594,6 +715,7 @@ def obter_dados_do_raster(indice_atual, r, dem, dsm, landcover, d, distancia, ar
     """Essa função extrai o perfil de elevação superfífice e land Cover ao longo do caminho entre dois pontos dentro
     de um mesmo arquivo Raster. """
     caminho, caminho_dsm, caminho_landcover = obter_raster(r[indice_atual], r[indice_atual])
+
     if (local_Configuracao["urb"] or local_Configuracao["veg"]) or not area:
 
         #extrai do Modelo digital do terreno o valor de altura do proximo ponto da reta e adiciona ao vetor perfil do terreno
@@ -707,6 +829,8 @@ def perfil(p1, p2, local_Configuracao, area=0):
     """
     indice_atual = 0
     caminho, caminho_dsm, caminho_landcover = obter_raster(p1, p1)
+
+
     with rasterio.open(caminho) as src:
         transform = src.transform
         r, distancia = reta(p1, p2, transform[0])
@@ -958,6 +1082,8 @@ def obter_raster(ponto1, ponto2):  # (lon, lat)
     return str(os.path.join('Raster', raster1 + '.tif')), str(
         os.path.join('dsm', raster1 + '.tif')), str(
         os.path.join('LandCover', raster_landcover + '.tif'))
+
+
 
 
 def ajuste(elevacao, distancia, hg1, hg2, dl1, dl2):
@@ -1329,6 +1455,7 @@ def ptp():
 
             f = float(request.form.get("f"))
             modelo = request.form.get("modelo")
+
             dem, dsm, landcover, distancia, r_global = perfil(p1, p2, local_Configuracao)
             Densidade_urbana = 0.9
             d, hg1, hg2, dl1, dl2, teta1, teta2, he1, he2, Dh, h_urb, visada, indice_visada_r, indice_visada = obter_dados_do_perfil(
